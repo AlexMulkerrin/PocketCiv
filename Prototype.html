@@ -35,7 +35,7 @@ function Simulation(width, height) {
 	this.terrain = new Terrain(width, height);
 	this.faction = [];
 	this.agent = [];
-	this.generateStartingFactions(8, 1);
+	this.generateStartingFactions(8, 4);
 }
 Simulation.prototype.update = function() { //TODO make agents find new path if required before moving.
 	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
@@ -43,11 +43,13 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 		if (this.agent[i].path.length>0) {
 			this.recordSeen(this.agent[i]);
 			this.agent[i].progressPath();
-			this.showVision(this.agent[i]);
 		} else {
 			this.agent[i].hasTarget = this.agent[i].findUnexplored();
-			this.showVision(this.agent[i]);
 		}
+	}
+	for (var i=0; i<this.agent.length; i++) {
+		this.showVision(this.agent[i]);
+	}
 		//var choice = randomInteger(4);
 		//var nx = this.agent[i].x + adj[choice][0];
 		//var ny = this.agent[i].y + adj[choice][1];
@@ -56,24 +58,25 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 			//this.agent[i].y = ny;
 		//}
 		
-	}
+	
 }
 Simulation.prototype.generateStartingFactions = function(numFactions, numAgents) {
 	var x = 0,y = 0, found = false;
 	for (var i=0; i<numFactions; i++) {
-		this.faction.push(new Faction());
+		newFaction = new Faction();
+		newFaction.visionMap = new VisionMap(this.terrain.width, this.terrain.height);
+		this.faction.push(newFaction);
 		for (var j=0; j<numAgents; j++) {
 			var pos = this.terrain.getValidPosition();
 			this.terrain.tile[pos.x][pos.y].isOccupied = true;
 			
-			newAgent = new Agent(pos.x, pos.y, i);
-			newAgent.visionMap = new VisionMap(this.terrain.width, this.terrain.height);
+			newAgent = new Agent(pos.x, pos.y, newFaction);
 			this.agent.push(newAgent);
 		}
 	}
 }
 Simulation.prototype.showVision = function(agent) {
-	var x,y;
+	var x,y,factionVision;
 	var adj = [ [0,0],
 		[-1,0], [1,0], [0,-1], [0,1],
 		[-1,-1], [-1,1], [1,-1], [1,1]
@@ -81,14 +84,15 @@ Simulation.prototype.showVision = function(agent) {
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
 		y = agent.y + adj[i][1];
+		factionVision = agent.faction.visionMap;
 		if (this.terrain.isInBounds(x,y)) {
-			agent.visionMap.tile[x][y].state = visionID.visible;
-			agent.visionMap.tile[x][y].type = this.terrain.tile[x][y].type;
+			factionVision.tile[x][y].state = visionID.visible;
+			factionVision.tile[x][y].type = this.terrain.tile[x][y].type;
 		}
 	}
 }
 Simulation.prototype.recordSeen = function(agent) {
-	var x,y;
+	var x,y,factionVision;
 	var adj = [ [0,0],
 		[-1,0], [1,0], [0,-1], [0,1],
 		[-1,-1], [-1,1], [1,-1], [1,1]
@@ -96,8 +100,9 @@ Simulation.prototype.recordSeen = function(agent) {
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
 		y = agent.y + adj[i][1];
+		factionVision = agent.faction.visionMap;
 		if (this.terrain.isInBounds(x,y)) {
-			agent.visionMap.tile[x][y].state = visionID.seen;
+			factionVision.tile[x][y].state = visionID.seen;
 		}
 	}
 }
@@ -179,9 +184,10 @@ function Tile(inTerrainID) {
 function Faction() {
 	this.name = "The True People";
 	this.colour = randomRGBString();
+	this.visionMap = [];
 }
 
-function Agent(inX, inY, inFaction) { //TODO give reference to faction object, move visionMap
+function Agent(inX, inY, inFaction) {
 	this.x = inX;
 	this.y = inY;
 	this.faction = inFaction; 
@@ -191,7 +197,7 @@ function Agent(inX, inY, inFaction) { //TODO give reference to faction object, m
 }
 const UNTRACKED = -1;
 Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
-	var map = this.visionMap;
+	var map = this.faction.visionMap;
 	var navmesh = create2DArray(map.width, map.height, UNTRACKED);
 	var dist = 0, found = false;
 	navmesh[this.x][this.y] = dist;
@@ -244,12 +250,12 @@ Agent.prototype.progressPath = function() {
 	var newPos = this.path[this.path.length-1];
 	this.x = newPos[0];
 	this.y = newPos[1];
-	this.visionMap.tile[this.x][this.y].isVisited = true;
+	this.faction.visionMap.tile[this.x][this.y].isVisited = true;
 	this.path.length = this.path.length-1;
 }
 
 const visionID = {unseen:0, seen:1, visible:2};
-function VisionMap(inWidth, inHeight) { //TODO attach to faction class to allow collaboration on exploration
+function VisionMap(inWidth, inHeight) { 
 	this.width = inWidth;
 	this.height = inHeight;
 	this.tile = [];
@@ -299,10 +305,10 @@ Display.prototype.refresh = function() {
 	this.drawTerrain();
 	this.drawAgents();
 	var dx,dy;
-	for (var i=0; i<this.targetSim.agent.length; i++) {
+	for (var i=0; i<this.targetSim.faction.length; i++) {
 		dx = (i+1)%3;
 		dy = Math.floor((i+1)/3);
-		this.drawVision(this.targetSim.agent[i], dx, dy);
+		this.drawVision(this.targetSim.faction[i], dx, dy);
 	}
 }
 Display.prototype.drawTerrain = function() {
@@ -321,8 +327,8 @@ Display.prototype.drawTerrain = function() {
 		}
 	}
 }
-Display.prototype.drawVision = function(agent, dx, dy) {
-	var map = agent.visionMap;
+Display.prototype.drawVision = function(faction, dx, dy) {
+	var map = faction.visionMap;
 	var offsetX = (map.width+1)*dx*this.sqSize;
 	var offsetY = (map.height+1)*dy*this.sqSize;
 	this.ctx.fillStyle = "#222222";
@@ -348,8 +354,9 @@ Display.prototype.drawVision = function(agent, dx, dy) {
 			}
 		}
 	}
-	this.ctx.fillStyle = this.targetSim.faction[agent.faction].colour;
-	this.ctx.fillRect(offsetX+agent.x*this.sqSize+1, offsetY+agent.y*this.sqSize+1, this.sqSize-2, this.sqSize-2);
+	// TODO display all faction units on vision and visible other faction units.
+	//this.ctx.fillStyle = this.targetSim.faction[agent.faction].colour;
+	//this.ctx.fillRect(offsetX+agent.x*this.sqSize+1, offsetY+agent.y*this.sqSize+1, this.sqSize-2, this.sqSize-2);
 }
 Display.prototype.drawAgents = function() {
 	var x, y, factionID;
@@ -359,9 +366,7 @@ Display.prototype.drawAgents = function() {
 	for (var i=0; i<agent.length; i++) {
 		x = agent[i].x;
 		y = agent[i].y;
-		factionID = agent[i].faction
-		this.ctx.fillStyle = this.targetSim.faction[factionID].colour;
-
+		this.ctx.fillStyle = agent[i].faction.colour;
 		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
 
 	}
