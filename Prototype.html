@@ -114,7 +114,8 @@ Simulation.prototype.showVision = function(agent) {
 	}
 }
 Simulation.prototype.recordSeen = function(agent) {
-	var x,y,factionVision;
+	var x,y;
+	var factionVision = agent.faction.visionMap;;
 	var adj = [ [0,0],
 		[-1,0], [1,0], [0,-1], [0,1],
 		[-1,-1], [-1,1], [1,-1], [1,1]
@@ -122,9 +123,9 @@ Simulation.prototype.recordSeen = function(agent) {
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
 		y = agent.y + adj[i][1];
-		factionVision = agent.faction.visionMap;
 		if (this.terrain.isInBounds(x,y)) {
 			factionVision.tile[x][y].state = visionID.seen;
+			factionVision.tile[x][y].desirability = factionVision.checkDesirability(x, y);
 		}
 	}
 }
@@ -143,6 +144,8 @@ function Terrain(inWidth, inHeight) {
 		}
 	}
 	this.generateLandmass();
+	
+	this.checkGlobalDesirability();
 }
 Terrain.prototype.generateLandmass = function() {
 	var stencil = [], sx, sy, direc;
@@ -167,6 +170,29 @@ Terrain.prototype.generateLandmass = function() {
 					this.tile[i][j].type = terrainID.grass;
 					this.totalLand++;
 				}
+			}
+		}
+	}
+}
+Terrain.prototype.checkGlobalDesirability = function() {
+	var fatCross = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],[1,-1],
+					[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	var nx,ny, total;
+	for (var i=0; i<this.width ; i++) {
+		for (var j=0; j<this.height ; j++) {
+			if (this.tile[i][j].type == terrainID.grass) {
+				total = 0;
+				for (var e=0; e<fatCross.length; e++) {
+					nx = i + fatCross[e][0];
+					ny = j + fatCross[e][1];
+					if (this.isInBounds(nx,ny)) {
+						if (this.tile[nx][ny].type == terrainID.grass) {
+							total++;
+						}
+						
+					}
+				}
+				this.tile[i][j].desirability = total;
 			}
 		}
 	}
@@ -196,11 +222,11 @@ Terrain.prototype.getValidPosition = function() {
 	return {x:nx, y:ny};
 }
 
-
 const terrainID = {unknown:0, water:1, grass:2};
 function Tile(inTerrainID) {
 	this.type = inTerrainID || terrainID.unknown;
 	this.isOccupied = false;
+	this.desirability = 0;
 }
 
 function Faction() {
@@ -217,10 +243,10 @@ function Agent(inX, inY, inFaction) {
 	this.path = [];
 	this.hasTarget = false;
 	this.visionMap = [];
-	this.state = randomInteger(3);
+	this.state = 1;//randomInteger(3);
 }
 const UNTRACKED = -1;
-Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
+Agent.prototype.findUnexplored = function() {
 	var map = this.faction.visionMap;
 	var navmesh = create2DArray(map.width, map.height, UNTRACKED);
 	var dist = 0, found = false;
@@ -271,7 +297,6 @@ Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
 	return false;
 }
 
-
 const visionID = {unseen:0, seen:1, visible:2};
 function VisionMap(inWidth, inHeight) { 
 	this.width = inWidth;
@@ -307,6 +332,25 @@ VisionMap.prototype.isInBounds = function(x, y) {
 	}
 	return false;
 }
+VisionMap.prototype.checkDesirability = function(x, y) {
+	var fatCross = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],[1,-1],
+					[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	var unknownTotal = 0, grassTotal = 0;
+	var nx,ny;
+	for (var i=0; i<fatCross.length; i++) {
+		nx = x + fatCross[i][0];
+		ny = y + fatCross[i][1];
+		if (this.isInBounds(nx,ny)) {
+			if (this.tile[nx][ny].type == terrainID.unknown) {
+				unknownTotal++;
+			} else if (this.tile[nx][ny].type == terrainID.grass) {
+				grassTotal++;
+			}
+			
+		}
+	}
+	return {unknown:unknownTotal, grass:grassTotal};
+}
 
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
@@ -339,6 +383,14 @@ Display.prototype.drawTerrain = function() {
 	for (var i=0; i<terrain.width ; i++) {
 		for (var j=0; j<terrain.height ; j++) {
 			if (terrain.tile[i][j].type == terrainID.grass) {
+				var desire = terrain.tile[i][j].desirability;
+				if (desire == 21) {
+					this.ctx.fillStyle = "#267F00";
+				} else {
+					this.ctx.fillStyle = RGBString(150-desire*5, 100+desire*2, 20);
+				}
+				
+				
 				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
 				
 			}
@@ -357,8 +409,12 @@ Display.prototype.drawVision = function(faction, dx, dy) {
 			if (map.tile[i][j].type == terrainID.grass) {
 				if (map.tile[i][j].state == visionID.visible) {
 					this.ctx.fillStyle = "#267F00";
+					//var desire = map.checkDesirability(i,j);
+					//this.ctx.fillStyle = RGBString(desire.unknown*10, desire.grass*10, desire.unknown*10);
 				} else {
 					this.ctx.fillStyle = "#7f7f7f";
+					//var desire = map.tile[i][j].desirability;
+					//this.ctx.fillStyle = RGBString(desire.unknown*10, desire.grass*10, desire.unknown*10);
 				}
 				this.ctx.fillRect(offsetX+i*this.sqSize,offsetY+j*this.sqSize,this.sqSize,this.sqSize);
 				
@@ -415,6 +471,16 @@ function create2DArray(width, height, initialValue) {
 			}
 		}
 	return result;
+}
+function RGBString(red,green,blue) {
+	var colourString='#';
+	if (red<16) colourString+='0';
+	colourString+=red.toString(16);
+	if (green<16) colourString+='0';
+	colourString+=green.toString(16);
+	if (blue<16) colourString+='0';
+	colourString+=blue.toString(16);
+	return colourString;
 }
 </script>
 </head>
