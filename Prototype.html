@@ -3,7 +3,7 @@
 <title>Pocket Civ</title>
 <meta charset="utf-8">
 <script>
-/* Villiage Simulator project:
+/* Pocket Civilisation
 Leveraging that new pathfinder algorithm for smart peeps
 */
 window.onload = function() {
@@ -29,8 +29,8 @@ Program.prototype.update = function() {
 	window.requestAnimationFrame( function(){t.update();} );
 }
 
-function Simulation(width, height) {
-	this.isRunning = true;
+function Simulation(width, height) { //TODO let sim be paused (space) or reset (R)
+	this.isRunning = true; 
 	this.generation = 0;
 	this.terrain = new Terrain(width, height);
 	this.faction = [];
@@ -38,27 +38,26 @@ function Simulation(width, height) {
 	this.generateStartingFactions(8, 4);
 }
 Simulation.prototype.update = function() { //TODO make agents find new path if required before moving.
-	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
 	for (var i=0; i<this.agent.length; i++) {
-		if (this.agent[i].path.length>0) {
-			this.recordSeen(this.agent[i]);
-			this.agent[i].progressPath();
-		} else {
-			this.agent[i].hasTarget = this.agent[i].findUnexplored();
+		this.recordSeen(this.agent[i]);
+		switch (this.agent[i].state) {
+			case stateID.wander:
+				this.randomWalk(this.agent[i]);
+			break;
+			
+			case stateID.explore:
+				if (this.agent[i].path.length>0) { 
+					this.progressPath(this.agent[i]);
+				} else {
+					this.agent[i].hasTarget = this.agent[i].findUnexplored();
+				}
+			break;
 		}
+		
 	}
 	for (var i=0; i<this.agent.length; i++) {
 		this.showVision(this.agent[i]);
 	}
-		//var choice = randomInteger(4);
-		//var nx = this.agent[i].x + adj[choice][0];
-		//var ny = this.agent[i].y + adj[choice][1];
-		//if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
-			//this.agent[i].x = nx;
-			//this.agent[i].y = ny;
-		//}
-		
-	
 }
 Simulation.prototype.generateStartingFactions = function(numFactions, numAgents) {
 	var x = 0,y = 0, found = false;
@@ -73,6 +72,29 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents)
 			newAgent = new Agent(pos.x, pos.y, newFaction);
 			this.agent.push(newAgent);
 		}
+	}
+}
+Simulation.prototype.randomWalk = function(agent) {
+	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
+	var choice = randomInteger(4);
+	var nx = agent.x + adj[choice][0];
+	var ny = agent.y + adj[choice][1];
+	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		agent.x = nx;
+		agent.y = ny;
+	}
+}
+Simulation.prototype.progressPath = function(agent) {
+	var newPos = agent.path[agent.path.length-1];
+	var nx = newPos[0];
+	var ny = newPos[1];
+	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		agent.x = newPos[0];
+		agent.y = newPos[1];
+		agent.faction.visionMap.tile[agent.x][agent.y].isVisited = true;
+		agent.path.length = agent.path.length-1;
+	} else {
+		agent.path = [];
 	}
 }
 Simulation.prototype.showVision = function(agent) {
@@ -156,7 +178,7 @@ Terrain.prototype.isInBounds = function(x, y) {
 	return false;
 }
 Terrain.prototype.isWithinBorders = function(x, y) {
-	if (x>=this.border && x<(this.width-this.border) && y>=this.border && y<(this.height-this.border)) {
+	if (x>this.border && x<(this.width-this.border)-1 && y>this.border && y<(this.height-this.border)-1) {
 		return true;
 	}
 	return false;
@@ -187,6 +209,7 @@ function Faction() {
 	this.visionMap = [];
 }
 
+const stateID = {wander:0, explore:1, settle:2};
 function Agent(inX, inY, inFaction) {
 	this.x = inX;
 	this.y = inY;
@@ -194,6 +217,7 @@ function Agent(inX, inY, inFaction) {
 	this.path = [];
 	this.hasTarget = false;
 	this.visionMap = [];
+	this.state = randomInteger(3);
 }
 const UNTRACKED = -1;
 Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
@@ -246,13 +270,7 @@ Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
 	}
 	return false;
 }
-Agent.prototype.progressPath = function() {
-	var newPos = this.path[this.path.length-1];
-	this.x = newPos[0];
-	this.y = newPos[1];
-	this.faction.visionMap.tile[this.x][this.y].isVisited = true;
-	this.path.length = this.path.length-1;
-}
+
 
 const visionID = {unseen:0, seen:1, visible:2};
 function VisionMap(inWidth, inHeight) { 
