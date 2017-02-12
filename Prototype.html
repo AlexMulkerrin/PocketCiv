@@ -1,0 +1,403 @@
+<html>
+<head>
+<title>Pocket Civ</title>
+<meta charset="utf-8">
+<script>
+/* Villiage Simulator project:
+Leveraging that new pathfinder algorithm for smart peeps
+*/
+window.onload = function() {
+	var program = new Program();
+	window.requestAnimationFrame( function(){program.update();} );
+}
+function Program() {
+	this.timer = 0;
+	this.updateRate = 5;
+	this.simulation = new Simulation(80,50);
+	this.display = new Display(this.simulation);
+	
+	this.simulation.update();
+	this.display.refresh();
+}
+Program.prototype.update = function() {
+	this.timer++;
+	if (this.timer % this.updateRate == 0) {
+		this.simulation.update();
+		this.display.refresh();
+	}
+	var t = this;
+	window.requestAnimationFrame( function(){t.update();} );
+}
+
+function Simulation(width, height) {
+	this.isRunning = true;
+	this.generation = 0;
+	this.terrain = new Terrain(width, height);
+	this.faction = [];
+	this.agent = [];
+	this.generateStartingFactions(8, 1);
+}
+Simulation.prototype.update = function() { //TODO make agents find new path if required before moving.
+	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
+	for (var i=0; i<this.agent.length; i++) {
+		if (this.agent[i].path.length>0) {
+			this.recordSeen(this.agent[i]);
+			this.agent[i].progressPath();
+			this.showVision(this.agent[i]);
+		} else {
+			this.agent[i].hasTarget = this.agent[i].findUnexplored();
+			this.showVision(this.agent[i]);
+		}
+		//var choice = randomInteger(4);
+		//var nx = this.agent[i].x + adj[choice][0];
+		//var ny = this.agent[i].y + adj[choice][1];
+		//if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+			//this.agent[i].x = nx;
+			//this.agent[i].y = ny;
+		//}
+		
+	}
+}
+Simulation.prototype.generateStartingFactions = function(numFactions, numAgents) {
+	var x = 0,y = 0, found = false;
+	for (var i=0; i<numFactions; i++) {
+		this.faction.push(new Faction());
+		for (var j=0; j<numAgents; j++) {
+			var pos = this.terrain.getValidPosition();
+			this.terrain.tile[pos.x][pos.y].isOccupied = true;
+			
+			newAgent = new Agent(pos.x, pos.y, i);
+			newAgent.visionMap = new VisionMap(this.terrain.width, this.terrain.height);
+			this.agent.push(newAgent);
+		}
+	}
+}
+Simulation.prototype.showVision = function(agent) {
+	var x,y;
+	var adj = [ [0,0],
+		[-1,0], [1,0], [0,-1], [0,1],
+		[-1,-1], [-1,1], [1,-1], [1,1]
+	];
+	for (var i=0; i<adj.length; i++) {
+		x = agent.x + adj[i][0];
+		y = agent.y + adj[i][1];
+		if (this.terrain.isInBounds(x,y)) {
+			agent.visionMap.tile[x][y].state = visionID.visible;
+			agent.visionMap.tile[x][y].type = this.terrain.tile[x][y].type;
+		}
+	}
+}
+Simulation.prototype.recordSeen = function(agent) {
+	var x,y;
+	var adj = [ [0,0],
+		[-1,0], [1,0], [0,-1], [0,1],
+		[-1,-1], [-1,1], [1,-1], [1,1]
+	];
+	for (var i=0; i<adj.length; i++) {
+		x = agent.x + adj[i][0];
+		y = agent.y + adj[i][1];
+		if (this.terrain.isInBounds(x,y)) {
+			agent.visionMap.tile[x][y].state = visionID.seen;
+		}
+	}
+}
+
+function Terrain(inWidth, inHeight) {
+	this.width = inWidth || 50;
+	this.height = inHeight || this.width;
+	this.border = 2;
+	this.totalLand = 0;
+	this.landRatio = 0.5;
+	this.tile = [];
+	for (var i=0; i<this.width ; i++) {
+		this.tile[i] = [];
+		for (var j=0; j<this.height ; j++) {
+			this.tile[i][j] = new Tile(terrainID.water);	
+		}
+	}
+	this.generateLandmass();
+}
+Terrain.prototype.generateLandmass = function() {
+	var stencil = [], sx, sy, direc;
+	var stamp = [[0,0],[1,0],[0,1],[-1,0],[0,-1]];
+	var adj = [[1,0],[0,1],[-1,0],[0,-1]];
+	var desiredLand = (this.width-2*this.border)*(this.height-2*this.border)*this.landRatio;
+	while (this.totalLand<desiredLand) {
+		stencil = create2DArray(this.width, this.height, 0);
+		sx = randomInteger(this.width - 2*this.border) + this.border;
+		sy = randomInteger(this.height - 2*this.border) + this.border;
+		for (var i = randomInteger(63)+1; i>0 && this.isWithinBorders(sx,sy); i--) {
+			for (var e=0; e<stamp.length; e++) {
+				stencil[sx+stamp[e][0]][sy+stamp[e][1]] = 1;	
+			}
+			direc = randomChoice(adj);
+			sx += direc[0];
+			sy += direc[1];
+		}
+		for (var i=0; i<this.width; i++) {
+			for (var j=0; j<this.height; j++) {
+				if (stencil[i][j]>0 && this.tile[i][j].type == terrainID.water) {
+					this.tile[i][j].type = terrainID.grass;
+					this.totalLand++;
+				}
+			}
+		}
+	}
+}
+Terrain.prototype.isInBounds = function(x, y) {
+	if (x>=0 && x<this.width && y>=0 && y<this.height) {
+		return true;
+	}
+	return false;
+}
+Terrain.prototype.isWithinBorders = function(x, y) {
+	if (x>=this.border && x<(this.width-this.border) && y>=this.border && y<(this.height-this.border)) {
+		return true;
+	}
+	return false;
+}
+Terrain.prototype.getValidPosition = function() {
+	var nx=0, ny=0, found=false, tile;
+	while (found==false) {
+			nx = randomInteger(this.width);
+			ny = randomInteger(this.height);
+			tile = this.tile[nx][ny];
+			if (tile.type == terrainID.grass && tile.isOccupied == false) {
+				found = true;
+			}
+		}
+	return {x:nx, y:ny};
+}
+
+
+const terrainID = {unknown:0, water:1, grass:2};
+function Tile(inTerrainID) {
+	this.type = inTerrainID || terrainID.unknown;
+	this.isOccupied = false;
+}
+
+function Faction() {
+	this.name = "The True People";
+	this.colour = randomRGBString();
+}
+
+function Agent(inX, inY, inFaction) { //TODO give reference to faction object, move visionMap
+	this.x = inX;
+	this.y = inY;
+	this.faction = inFaction; 
+	this.path = [];
+	this.hasTarget = false;
+	this.visionMap = [];
+}
+const UNTRACKED = -1;
+Agent.prototype.findUnexplored = function() { //TODO attach to faction class?
+	var map = this.visionMap;
+	var navmesh = create2DArray(map.width, map.height, UNTRACKED);
+	var dist = 0, found = false;
+	navmesh[this.x][this.y] = dist;
+	this.path = [];
+	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
+	var checklist=[[this.x, this.y]], nextCheck=[];
+	var end = [0,0];
+	while (checklist.length>0 && found == false) { //TODO make generic floodfill? found = flood(nav)
+		dist++;
+		for (var i=0; i<checklist.length; i++) {
+			for (var j=0; j<adj.length; j++) {
+				var nx = checklist[i][0] + adj[j][0];
+				var ny = checklist[i][1] + adj[j][1];
+				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
+					if (navmesh[nx][ny] == UNTRACKED) {
+						navmesh[nx][ny] = dist;
+						nextCheck.push( [nx, ny] );
+						if (map.isUnexplored(nx,ny)) {
+							found = true;
+							end = [nx, ny];
+						}
+					}
+				}
+			}
+		}
+		checklist = nextCheck;
+		nextCheck = [];
+	}
+	if (found) {
+		var i=0;
+		this.path[0] = end;
+		while (dist>0) {
+			dist--;
+			for (var j=0; j<adj.length; j++) {
+				var nx = this.path[i][0] + adj[j][0];
+				var ny = this.path[i][1] + adj[j][1];
+				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
+					if (navmesh[nx][ny] == dist) {
+						this.path[i+1] = [nx, ny];
+					}
+				}
+			}
+			i++;
+		}
+		return true;
+	}
+	return false;
+}
+Agent.prototype.progressPath = function() {
+	var newPos = this.path[this.path.length-1];
+	this.x = newPos[0];
+	this.y = newPos[1];
+	this.visionMap.tile[this.x][this.y].isVisited = true;
+	this.path.length = this.path.length-1;
+}
+
+const visionID = {unseen:0, seen:1, visible:2};
+function VisionMap(inWidth, inHeight) { //TODO attach to faction class to allow collaboration on exploration
+	this.width = inWidth;
+	this.height = inHeight;
+	this.tile = [];
+	for (var i=0; i<this.width ; i++) {
+		this.tile[i] = [];
+		for (var j=0; j<this.height ; j++) {
+			this.tile[i][j] = new Tile();
+			this.tile[i][j].state = visionID.unseen;
+			this.tile[i][j].isVisited = false;
+		}
+	}
+}
+VisionMap.prototype.isUnexplored = function(cx, cy) {
+	var x,y;
+	var adj = [ [0,0], 
+		[-1,0], [1,0], [0,-1], [0,1],
+		[-1,-1], [-1,1], [1,-1], [1,1]
+	];
+	for (var i=0; i<adj.length; i++) {
+		x = cx + adj[i][0];
+		y = cy + adj[i][1];
+		if (this.isInBounds(x,y) && this.tile[x][y].state == visionID.unseen) {
+			return true;
+		}
+	}
+	return false;
+}
+VisionMap.prototype.isInBounds = function(x, y) {
+	if (x>=0 && x<this.width && y>=0 && y<this.height) {
+		return true;
+	}
+	return false;
+}
+
+function Display(inSimulation) {
+	this.targetSim = inSimulation;
+	this.sqSize = 4;
+	
+	this.canvas = document.getElementById("pocketCivCanvas");
+	this.canvas.width = window.innerWidth;
+	this.canvas.height = window.innerHeight;
+	this.ctx = this.canvas.getContext("2d");
+}
+Display.prototype.refresh = function() {
+	this.ctx.fillStyle = "#d0e4fe";
+	this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
+	this.drawTerrain();
+	this.drawAgents();
+	var dx,dy;
+	for (var i=0; i<this.targetSim.agent.length; i++) {
+		dx = (i+1)%3;
+		dy = Math.floor((i+1)/3);
+		this.drawVision(this.targetSim.agent[i], dx, dy);
+	}
+}
+Display.prototype.drawTerrain = function() {
+	var terrain = this.targetSim.terrain;
+	
+	this.ctx.fillStyle = "#005784";
+	this.ctx.fillRect(0,0,terrain.width*this.sqSize, terrain.height*this.sqSize);
+
+	this.ctx.fillStyle = "#267F00";
+	for (var i=0; i<terrain.width ; i++) {
+		for (var j=0; j<terrain.height ; j++) {
+			if (terrain.tile[i][j].type == terrainID.grass) {
+				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
+				
+			}
+		}
+	}
+}
+Display.prototype.drawVision = function(agent, dx, dy) {
+	var map = agent.visionMap;
+	var offsetX = (map.width+1)*dx*this.sqSize;
+	var offsetY = (map.height+1)*dy*this.sqSize;
+	this.ctx.fillStyle = "#222222";
+	this.ctx.fillRect(offsetX,offsetY,map.width*this.sqSize, map.height*this.sqSize);
+
+	for (var i=0; i<map.width ; i++) {
+		for (var j=0; j<map.height ; j++) {
+			if (map.tile[i][j].type == terrainID.grass) {
+				if (map.tile[i][j].state == visionID.visible) {
+					this.ctx.fillStyle = "#267F00";
+				} else {
+					this.ctx.fillStyle = "#7f7f7f";
+				}
+				this.ctx.fillRect(offsetX+i*this.sqSize,offsetY+j*this.sqSize,this.sqSize,this.sqSize);
+				
+			} else if (map.tile[i][j].type == terrainID.water) {
+				if (map.tile[i][j].state == visionID.visible) {
+					this.ctx.fillStyle = "#005784";
+				} else {
+					this.ctx.fillStyle = "#575757";
+				}
+				this.ctx.fillRect(offsetX+i*this.sqSize,offsetY+j*this.sqSize,this.sqSize,this.sqSize);
+			}
+		}
+	}
+	this.ctx.fillStyle = this.targetSim.faction[agent.faction].colour;
+	this.ctx.fillRect(offsetX+agent.x*this.sqSize+1, offsetY+agent.y*this.sqSize+1, this.sqSize-2, this.sqSize-2);
+}
+Display.prototype.drawAgents = function() {
+	var x, y, factionID;
+	var sqSize = this.sqSize;
+	var terrain = this.targetSim.terrain;
+	var agent = this.targetSim.agent;
+	for (var i=0; i<agent.length; i++) {
+		x = agent[i].x;
+		y = agent[i].y;
+		factionID = agent[i].faction
+		this.ctx.fillStyle = this.targetSim.faction[factionID].colour;
+
+		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
+
+	}
+}
+
+function randomChoice(options) {
+	var pick = randomInteger(options.length);
+	return options[pick];
+}
+function randomRGBString() {
+	var colourstring='#';
+	for (var i=0; i<6; i++) {
+	hexDigit = randomInteger(16);
+	hexDigit = hexDigit.toString(16);
+	colourstring += hexDigit;
+	}
+	return colourstring;
+}
+function randomInteger(limit) {
+	return Math.floor(Math.random()*limit);
+}
+function create2DArray(width, height, initialValue) {
+	result = [];
+	for (var i=0; i<width; i++) {
+		result[i] = [];
+		for (var j=0; j<height; j++) {
+				result[i][j] = initialValue;
+			}
+		}
+	return result;
+}
+</script>
+</head>
+<body>
+<canvas id="pocketCivCanvas" style="position:absolute; top:0px; left:0px; z-index:-1;">
+HTML5 canvas goes here
+</canvas>
+</body>
+</html>
