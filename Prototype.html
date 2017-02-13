@@ -29,15 +29,30 @@ Program.prototype.update = function() {
 	window.requestAnimationFrame( function(){t.update();} );
 }
 
+const UNIT_COST = 420;
 function Simulation(width, height) { //TODO let sim be paused (space) or reset (R)
 	this.isRunning = true; 
 	this.generation = 0;
 	this.terrain = new Terrain(width, height);
 	this.faction = [];
 	this.agent = [];
-	this.generateStartingFactions(8, 4);
+	this.city = [];
+	this.generateStartingFactions(8, 0, 1);
 }
 Simulation.prototype.update = function() { //TODO make agents find new path if required before moving.
+	this.generation++;
+	for (var i=0; i<this.city.length; i++) {
+		city = this.city[i];
+		this.showVision(city);
+		city.productionRate = city.getYield();
+		
+		city.stored += city.productionRate;
+		if (city.stored > UNIT_COST) {
+			city.stored -= UNIT_COST;
+			this.agent.push(new Agent(city.x, city.y, city.faction));
+		}
+	}
+	
 	for (var i=0; i<this.agent.length; i++) {
 		this.recordSeen(this.agent[i]);
 		switch (this.agent[i].state) {
@@ -59,7 +74,7 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 		this.showVision(this.agent[i]);
 	}
 }
-Simulation.prototype.generateStartingFactions = function(numFactions, numAgents) {
+Simulation.prototype.generateStartingFactions = function(numFactions, numAgents, numCities) {
 	var x = 0,y = 0, found = false;
 	for (var i=0; i<numFactions; i++) {
 		newFaction = new Faction();
@@ -67,10 +82,15 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents)
 		this.faction.push(newFaction);
 		for (var j=0; j<numAgents; j++) {
 			var pos = this.terrain.getValidPosition();
-			this.terrain.tile[pos.x][pos.y].isOccupied = true;
-			
+			this.terrain.tile[pos.x][pos.y].occupiers.push(j);
 			newAgent = new Agent(pos.x, pos.y, newFaction);
 			this.agent.push(newAgent);
+		}
+		for (var j=0; j<numCities; j++) {
+			var pos = this.terrain.getValidPosition();
+			this.terrain.tile[pos.x][pos.y].cityPresent=j;
+			newCity = new Structure(pos.x, pos.y, newFaction);
+			this.city.push(newCity);
 		}
 	}
 }
@@ -97,7 +117,7 @@ Simulation.prototype.progressPath = function(agent) {
 		agent.path = [];
 	}
 }
-Simulation.prototype.showVision = function(agent) {
+Simulation.prototype.showVision = function(agent) { // Can be agent or structure as argument!
 	var x,y,factionVision;
 	var adj = [ [0,0],
 		[-1,0], [1,0], [0,-1], [0,1],
@@ -113,7 +133,7 @@ Simulation.prototype.showVision = function(agent) {
 		}
 	}
 }
-Simulation.prototype.recordSeen = function(agent) {
+Simulation.prototype.recordSeen = function(agent) { //TODO make sure to update 'fatcross' range of desirability modification...
 	var x,y;
 	var factionVision = agent.faction.visionMap;;
 	var adj = [ [0,0],
@@ -174,6 +194,12 @@ Terrain.prototype.generateLandmass = function() {
 		}
 	}
 }
+Terrain.prototype.identifyCoast = function() { // TODO
+
+}
+Terrain.prototype.identifyIslands = function() { // TODO
+
+}
 Terrain.prototype.checkGlobalDesirability = function() {
 	var fatCross = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],[1,-1],
 					[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
@@ -215,7 +241,7 @@ Terrain.prototype.getValidPosition = function() {
 			nx = randomInteger(this.width);
 			ny = randomInteger(this.height);
 			tile = this.tile[nx][ny];
-			if (tile.type == terrainID.grass && tile.isOccupied == false) {
+			if (tile.type == terrainID.grass && tile.occupiers.length == 0 && tile.cityPresent == NONE) {
 				found = true;
 			}
 		}
@@ -223,78 +249,21 @@ Terrain.prototype.getValidPosition = function() {
 }
 
 const terrainID = {unknown:0, water:1, grass:2};
+const NONE = -1;
 function Tile(inTerrainID) {
 	this.type = inTerrainID || terrainID.unknown;
-	this.isOccupied = false;
+	this.occupiers = [];
+	this.cityPresent = NONE;
 	this.desirability = 0;
+	this.factionTerritory = NONE;
+	this.isCoast = false;
+	this.islandID = NONE;
 }
 
 function Faction() {
 	this.name = "The True People";
 	this.colour = randomRGBString();
 	this.visionMap = [];
-}
-
-const stateID = {wander:0, explore:1, settle:2};
-function Agent(inX, inY, inFaction) {
-	this.x = inX;
-	this.y = inY;
-	this.faction = inFaction; 
-	this.path = [];
-	this.hasTarget = false;
-	this.visionMap = [];
-	this.state = 1;//randomInteger(3);
-}
-const UNTRACKED = -1;
-Agent.prototype.findUnexplored = function() {
-	var map = this.faction.visionMap;
-	var navmesh = create2DArray(map.width, map.height, UNTRACKED);
-	var dist = 0, found = false;
-	navmesh[this.x][this.y] = dist;
-	this.path = [];
-	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
-	var checklist=[[this.x, this.y]], nextCheck=[];
-	var end = [0,0];
-	while (checklist.length>0 && found == false) { //TODO make generic floodfill? found = flood(nav)
-		dist++;
-		for (var i=0; i<checklist.length; i++) {
-			for (var j=0; j<adj.length; j++) {
-				var nx = checklist[i][0] + adj[j][0];
-				var ny = checklist[i][1] + adj[j][1];
-				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
-					if (navmesh[nx][ny] == UNTRACKED) {
-						navmesh[nx][ny] = dist;
-						nextCheck.push( [nx, ny] );
-						if (map.isUnexplored(nx,ny)) {
-							found = true;
-							end = [nx, ny];
-						}
-					}
-				}
-			}
-		}
-		checklist = nextCheck;
-		nextCheck = [];
-	}
-	if (found) {
-		var i=0;
-		this.path[0] = end;
-		while (dist>0) {
-			dist--;
-			for (var j=0; j<adj.length; j++) {
-				var nx = this.path[i][0] + adj[j][0];
-				var ny = this.path[i][1] + adj[j][1];
-				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
-					if (navmesh[nx][ny] == dist) {
-						this.path[i+1] = [nx, ny];
-					}
-				}
-			}
-			i++;
-		}
-		return true;
-	}
-	return false;
 }
 
 const visionID = {unseen:0, seen:1, visible:2};
@@ -352,6 +321,79 @@ VisionMap.prototype.checkDesirability = function(x, y) {
 	return {unknown:unknownTotal, grass:grassTotal};
 }
 
+const stateID = {wander:0, explore:1, settle:2};
+function Agent(inX, inY, inFaction) {
+	this.x = inX;
+	this.y = inY;
+	this.faction = inFaction; 
+	this.path = [];
+	this.hasTarget = false;
+	this.visionMap = [];
+	this.state = 1;//randomInteger(3);
+}
+Agent.prototype.findUnexplored = function() {
+	var map = this.faction.visionMap;
+	var navmesh = create2DArray(map.width, map.height, NONE);
+	var dist = 0, found = false;
+	navmesh[this.x][this.y] = dist;
+	this.path = [];
+	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
+	var checklist=[[this.x, this.y]], nextCheck=[];
+	var end = [0,0];
+	while (checklist.length>0 && found == false) { //TODO make generic floodfill? found = flood(nav)
+		dist++;
+		for (var i=0; i<checklist.length; i++) {
+			for (var j=0; j<adj.length; j++) {
+				var nx = checklist[i][0] + adj[j][0];
+				var ny = checklist[i][1] + adj[j][1];
+				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
+					if (navmesh[nx][ny] == NONE) {
+						navmesh[nx][ny] = dist;
+						nextCheck.push( [nx, ny] );
+						if (map.isUnexplored(nx,ny)) {
+							found = true;
+							end = [nx, ny];
+						}
+					}
+				}
+			}
+		}
+		checklist = nextCheck;
+		nextCheck = [];
+	}
+	if (found) {
+		var i=0;
+		this.path[0] = end;
+		while (dist>0) {
+			dist--;
+			for (var j=0; j<adj.length; j++) {
+				var nx = this.path[i][0] + adj[j][0];
+				var ny = this.path[i][1] + adj[j][1];
+				if (map.isInBounds(nx,ny) && map.tile[nx][ny].type == terrainID.grass) {
+					if (navmesh[nx][ny] == dist) {
+						this.path[i+1] = [nx, ny];
+					}
+				}
+			}
+			i++;
+		}
+		return true;
+	}
+	return false;
+}
+
+function Structure(inX, inY, inFaction) {
+	this.name = "A city";
+	this.x = inX;
+	this.y = inY;
+	this.faction = inFaction;
+	this.stored = 0;
+	this.productionRate = 21;
+}
+Structure.prototype.getYield = function() {
+	return this.faction.visionMap.checkDesirability(this.x, this.y).grass;
+}
+
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
 	this.sqSize = 4;
@@ -366,12 +408,14 @@ Display.prototype.refresh = function() {
 	this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
 	this.drawTerrain();
 	this.drawAgents();
+	this.drawStructures();
 	var dx,dy;
 	for (var i=0; i<this.targetSim.faction.length; i++) {
 		dx = (i+1)%3;
 		dy = Math.floor((i+1)/3);
 		this.drawVision(this.targetSim.faction[i], dx, dy);
 	}
+	this.drawStats();
 }
 Display.prototype.drawTerrain = function() {
 	var terrain = this.targetSim.terrain;
@@ -435,8 +479,8 @@ Display.prototype.drawVision = function(faction, dx, dy) {
 Display.prototype.drawAgents = function() {
 	var x, y, factionID;
 	var sqSize = this.sqSize;
-	var terrain = this.targetSim.terrain;
 	var agent = this.targetSim.agent;
+	
 	for (var i=0; i<agent.length; i++) {
 		x = agent[i].x;
 		y = agent[i].y;
@@ -444,6 +488,26 @@ Display.prototype.drawAgents = function() {
 		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
 
 	}
+}
+Display.prototype.drawStructures = function() {
+	var x, y, factionID;
+	var sqSize = this.sqSize;
+	var city = this.targetSim.city;
+	
+	for (var i=0; i<city.length; i++) {
+		x = city[i].x;
+		y = city[i].y;
+		this.ctx.fillStyle = "#bbbbbb";
+		this.ctx.fillRect(x*sqSize, y*sqSize, sqSize, sqSize);
+		this.ctx.fillStyle = city[i].faction.colour;
+		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
+
+	}
+}
+
+Display.prototype.drawStats = function() {
+	this.ctx.fillStyle = "#ffffff";
+	this.ctx.fillText("Turn: "+this.targetSim.generation,5,12);
 }
 
 function randomChoice(options) {
