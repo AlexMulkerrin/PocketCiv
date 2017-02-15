@@ -43,11 +43,11 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 	this.generation++;
 	for (var i=0; i<this.city.length; i++) {
 		city = this.city[i];
-		this.showVision(city);
+		this.recordSeen(city);
 		city.productionRate = city.getYield();
 		
 		city.stored += city.productionRate;
-		if (city.stored > UNIT_COST) {
+		if (city.stored > UNIT_COST ){//&& city.faction.id==1) {
 			city.stored -= UNIT_COST;
 			this.agent.push(new Agent(city.x, city.y, city.faction));
 		}
@@ -55,41 +55,56 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 	
 	for (var i=0; i<this.agent.length; i++) {
 		this.recordSeen(this.agent[i]);
-		switch (this.agent[i].state) {
-			case stateID.wander:
-				this.randomWalk(this.agent[i]);
-			break;
-			
-			case stateID.explore:
-				if (this.agent[i].path.length>0) { 
-					this.progressPath(this.agent[i]);
-				} else {
-					this.agent[i].hasTarget = this.agent[i].findUnexplored();
-				}
-			break;
+		if (this.agent[i].isAlive) {
+			switch (this.agent[i].state) {
+				case stateID.wander:
+					this.randomWalk(this.agent[i]);
+				break;
+				
+				case stateID.explore:
+					if (this.agent[i].path.length==0) {
+						this.agent[i].hasTarget = this.agent[i].findUnexplored();
+					}
+					if (this.agent[i].path.length>0) { 
+						this.progressPath(this.agent[i], i);
+					} 
+					
+				break;
+			}
 		}
 		
 	}
+	var newAgentList = [];
 	for (var i=0; i<this.agent.length; i++) {
-		this.showVision(this.agent[i]);
+		if (this.agent[i].isAlive) {
+			this.showVision(this.agent[i]);
+			newAgentList.push(this.agent[i]);
+		} 
 	}
+	this.agent = newAgentList;
+	
+	for (var i=0; i<this.city.length; i++) {
+		this.showVision(this.city[i]);
+	}
+	
 }
 Simulation.prototype.generateStartingFactions = function(numFactions, numAgents, numCities) {
 	var x = 0,y = 0, found = false;
 	for (var i=0; i<numFactions; i++) {
-		newFaction = new Faction();
+		newFaction = new Faction(i);
 		newFaction.visionMap = new VisionMap(this.terrain.width, this.terrain.height);
 		this.faction.push(newFaction);
 		for (var j=0; j<numAgents; j++) {
 			var pos = this.terrain.getValidPosition();
-			this.terrain.tile[pos.x][pos.y].occupiers.push(j);
-			newAgent = new Agent(pos.x, pos.y, newFaction);
+			
+			var newAgent = new Agent(pos.x, pos.y, newFaction);
+			this.terrain.tile[pos.x][pos.y].occupiers.push(newAgent);
 			this.agent.push(newAgent);
 		}
 		for (var j=0; j<numCities; j++) {
 			var pos = this.terrain.getValidPosition();
-			this.terrain.tile[pos.x][pos.y].cityPresent=j;
 			newCity = new Structure(pos.x, pos.y, newFaction);
+			this.terrain.tile[pos.x][pos.y].cityPresent = newCity;
 			this.city.push(newCity);
 		}
 	}
@@ -100,21 +115,70 @@ Simulation.prototype.randomWalk = function(agent) {
 	var nx = agent.x + adj[choice][0];
 	var ny = agent.y + adj[choice][1];
 	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		this.resolveAgentOccupations(agent, nx, ny);
 		agent.x = nx;
 		agent.y = ny;
 	}
 }
-Simulation.prototype.progressPath = function(agent) {
+Simulation.prototype.progressPath = function(agent, index) {
 	var newPos = agent.path[agent.path.length-1];
 	var nx = newPos[0];
 	var ny = newPos[1];
 	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		this.resolveAgentOccupations(agent, nx, ny);
 		agent.x = newPos[0];
 		agent.y = newPos[1];
 		agent.faction.visionMap.tile[agent.x][agent.y].isVisited = true;
 		agent.path.length = agent.path.length-1;
 	} else {
 		agent.path = [];
+	}
+}
+Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) { // TODO think about best implementation...
+	var start = this.terrain.tile[agent.x][agent.y];
+	
+	// remove agent objref from start tile occupiers list
+	start.occupiers = start.occupiers.filter(function(a){return (a !== agent)});
+	
+	var dest =  this.terrain.tile[nx][ny];
+	if (dest.occupiers.length>0) {
+		var topAgent = dest.occupiers[0];
+
+		if (topAgent.faction !== agent.faction) {
+			var combatResult = this.resolveCombat(agent, topAgent);
+			if (combatResult == true) {
+				// destroy defending stack
+				for (var i=0; i<dest.occupiers.length; i++) {
+					dest.occupiers[i].isAlive = false;
+				}
+				dest.occupiers = [];
+				dest.occupiers.push(agent); 
+				// flip city too!
+				if (dest.cityPresent !== NONE) {
+					dest.cityPresent.faction = agent.faction;
+				}
+				
+			}
+		} else {
+			// occupying same square as fellow faction agents
+			dest.occupiers.push(agent); 
+		}
+	} else {
+		// nobody in new tile
+		dest.occupiers.push(agent); 
+		if (dest.cityPresent !== NONE) {
+			dest.cityPresent.faction = agent.faction;
+		}
+	}
+}
+Simulation.prototype.resolveCombat = function(attacker, defender) {
+	var attackerWon = randomBool(); 
+	if (attackerWon) {
+		defender.isAlive = false;
+		return true;
+	} else {
+		attacker.isAlive = false;
+		return false;
 	}
 }
 Simulation.prototype.showVision = function(agent) { // Can be agent or structure as argument!
@@ -260,7 +324,8 @@ function Tile(inTerrainID) {
 	this.islandID = NONE;
 }
 
-function Faction() {
+function Faction(idIn) {
+	this.id = idIn
 	this.name = "The True People";
 	this.colour = randomRGBString();
 	this.visionMap = [];
@@ -329,7 +394,8 @@ function Agent(inX, inY, inFaction) {
 	this.path = [];
 	this.hasTarget = false;
 	this.visionMap = [];
-	this.state = 1;//randomInteger(3);
+	this.state = stateID.explore;//randomInteger(3);
+	this.isAlive = true;
 }
 Agent.prototype.findUnexplored = function() {
 	var map = this.faction.visionMap;
@@ -364,7 +430,7 @@ Agent.prototype.findUnexplored = function() {
 	if (found) {
 		var i=0;
 		this.path[0] = end;
-		while (dist>0) {
+		while (dist>1) { // bugfix to not include start tile...
 			dist--;
 			for (var j=0; j<adj.length; j++) {
 				var nx = this.path[i][0] + adj[j][0];
@@ -396,7 +462,7 @@ Structure.prototype.getYield = function() {
 
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
-	this.sqSize = 4;
+	this.sqSize = 8;
 	
 	this.canvas = document.getElementById("pocketCivCanvas");
 	this.canvas.width = window.innerWidth;
@@ -434,6 +500,13 @@ Display.prototype.drawTerrain = function() {
 					this.ctx.fillStyle = RGBString(150-desire*5, 100+desire*2, 20);
 				}
 				
+				// DEBUG
+				//if (terrain.tile[i][j].occupiers != 0) {
+				//	this.ctx.fillStyle = "#ffffff";
+				//}
+				//if (terrain.tile[i][j].cityPresent !== NONE) {
+				//	this.ctx.fillStyle = "#ff0000";
+				//}
 				
 				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
 				
@@ -504,7 +577,6 @@ Display.prototype.drawStructures = function() {
 
 	}
 }
-
 Display.prototype.drawStats = function() {
 	this.ctx.fillStyle = "#ffffff";
 	this.ctx.fillText("Turn: "+this.targetSim.generation,5,12);
@@ -522,6 +594,12 @@ function randomRGBString() {
 	colourstring += hexDigit;
 	}
 	return colourstring;
+}
+function randomBool() {
+	if (Math.random()>0.5) {
+		return true;
+	}
+	return false;
 }
 function randomInteger(limit) {
 	return Math.floor(Math.random()*limit);
