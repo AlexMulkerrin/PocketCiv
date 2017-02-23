@@ -59,11 +59,18 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 			switch (this.agent[i].state) {
 				case stateID.wander:
 					this.randomWalk(this.agent[i]);
+					//this.checkSettling(this.agent[i]);
 				break;
 				
 				case stateID.explore:
 					if (this.agent[i].path.length==0) {
+						// check if agent is in good position to settle
+						//this.checkSettling(this.agent[i]);
+						
 						this.agent[i].hasTarget = this.agent[i].findUnexplored();
+						if (this.agent[i].hasTarget == false) {
+							this.agent[i].state = stateID.wander;
+						}
 					}
 					if (this.agent[i].path.length>0) { 
 						this.progressPath(this.agent[i], i);
@@ -78,7 +85,12 @@ Simulation.prototype.update = function() { //TODO make agents find new path if r
 	for (var i=0; i<this.agent.length; i++) {
 		if (this.agent[i].isAlive) {
 			this.showVision(this.agent[i]);
-			newAgentList.push(this.agent[i]);
+			//put settle check here?
+			this.checkSettling(this.agent[i]);
+			// if not settled continue to be an agent.
+			if (this.agent[i].isAlive) {
+				newAgentList.push(this.agent[i]);
+			}
 		} 
 	}
 	this.agent = newAgentList;
@@ -103,8 +115,10 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents,
 		}
 		for (var j=0; j<numCities; j++) {
 			var pos = this.terrain.getValidPosition();
-			newCity = new Structure(pos.x, pos.y, newFaction);
+			var index = this.city.length;
+			var newCity = new Structure(index, pos.x, pos.y, newFaction);
 			this.terrain.tile[pos.x][pos.y].cityPresent = newCity;
+			this.foundCity(newCity);
 			this.city.push(newCity);
 		}
 	}
@@ -130,6 +144,8 @@ Simulation.prototype.progressPath = function(agent, index) {
 		agent.y = newPos[1];
 		agent.faction.visionMap.tile[agent.x][agent.y].isVisited = true;
 		agent.path.length = agent.path.length-1;
+		//new location might be good for settling
+		//this.checkSettling(agent);
 	} else {
 		agent.path = [];
 	}
@@ -181,6 +197,24 @@ Simulation.prototype.resolveCombat = function(attacker, defender) {
 		return false;
 	}
 }
+Simulation.prototype.checkSettling = function(agent) {
+	var desireResult = agent.faction.visionMap.checkDesirability(agent.x, agent.y)
+	if (desireResult.unknown == 0 && desireResult.grass == 21) {
+	
+		var cityTile = this.terrain.tile[agent.x][agent.y];
+		// remove agent objref from start tile occupiers list
+		cityTile.occupiers = cityTile.occupiers.filter(function(a){return (a !== agent)});
+		var index = this.city.length;
+		
+		var newCity = new Structure(index, agent.x, agent.y, agent.faction);
+		this.terrain.tile[agent.x][agent.y].cityPresent = newCity;
+		this.foundCity(newCity);
+		this.city.push(newCity);
+		
+		// now settled the agent no longer exists.
+		agent.isAlive = false;
+	}
+}
 Simulation.prototype.showVision = function(agent) { // Can be agent or structure as argument!
 	var x,y,factionVision;
 	var adj = [ [0,0],
@@ -192,14 +226,18 @@ Simulation.prototype.showVision = function(agent) { // Can be agent or structure
 		y = agent.y + adj[i][1];
 		factionVision = agent.faction.visionMap;
 		if (this.terrain.isInBounds(x,y)) {
+			var sourceTile = this.terrain.tile[x][y];
 			factionVision.tile[x][y].state = visionID.visible;
-			factionVision.tile[x][y].type = this.terrain.tile[x][y].type;
+			factionVision.tile[x][y].type = sourceTile.type;
+			if (sourceTile.cityTerritory !== NONE) {
+				factionVision.tile[x][y].cityTerritory = sourceTile.cityTerritory.id;
+			}
 		}
 	}
 }
 Simulation.prototype.recordSeen = function(agent) { //TODO make sure to update 'fatcross' range of desirability modification...
 	var x,y;
-	var factionVision = agent.faction.visionMap;;
+	var factionVision = agent.faction.visionMap;
 	var adj = [ [0,0],
 		[-1,0], [1,0], [0,-1], [0,1],
 		[-1,-1], [-1,1], [1,-1], [1,1]
@@ -210,6 +248,18 @@ Simulation.prototype.recordSeen = function(agent) { //TODO make sure to update '
 		if (this.terrain.isInBounds(x,y)) {
 			factionVision.tile[x][y].state = visionID.seen;
 			factionVision.tile[x][y].desirability = factionVision.checkDesirability(x, y);
+		}
+	}
+}
+Simulation.prototype.foundCity = function(city) {
+	var fatCross = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],[1,-1],
+					[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	var nx, ny
+	for (var i=0; i<fatCross.length; i++) {
+		nx = city.x + fatCross[i][0];
+		ny = city.y  + fatCross[i][1];
+		if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].cityTerritory == NONE) {
+			this.terrain.tile[nx][ny].cityTerritory = city;
 		}
 	}
 }
@@ -319,7 +369,7 @@ function Tile(inTerrainID) {
 	this.occupiers = [];
 	this.cityPresent = NONE;
 	this.desirability = 0;
-	this.factionTerritory = NONE;
+	this.cityTerritory = NONE;
 	this.isCoast = false;
 	this.islandID = NONE;
 }
@@ -375,9 +425,10 @@ VisionMap.prototype.checkDesirability = function(x, y) {
 		nx = x + fatCross[i][0];
 		ny = y + fatCross[i][1];
 		if (this.isInBounds(nx,ny)) {
-			if (this.tile[nx][ny].type == terrainID.unknown) {
+			var currentTile = this.tile[nx][ny];
+			if (currentTile.type == terrainID.unknown) {
 				unknownTotal++;
-			} else if (this.tile[nx][ny].type == terrainID.grass) {
+			} else if (currentTile.type == terrainID.grass && currentTile.cityTerritory == NONE) {
 				grassTotal++;
 			}
 			
@@ -448,7 +499,8 @@ Agent.prototype.findUnexplored = function() {
 	return false;
 }
 
-function Structure(inX, inY, inFaction) {
+function Structure(index, inX, inY, inFaction) {
+	this.id = index;
 	this.name = "A city";
 	this.x = inX;
 	this.y = inY;
@@ -457,12 +509,27 @@ function Structure(inX, inY, inFaction) {
 	this.productionRate = 21;
 }
 Structure.prototype.getYield = function() {
-	return this.faction.visionMap.checkDesirability(this.x, this.y).grass;
+	var fatCross = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],[1,-1],
+					[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	var grassTotal = 0;
+	var nx,ny;
+	for (var i=0; i<fatCross.length; i++) {
+		nx = this.x + fatCross[i][0];
+		ny = this.y + fatCross[i][1];
+		if (this.faction.visionMap.isInBounds(nx,ny)) {
+			var currentTile = this.faction.visionMap.tile[nx][ny];
+			if (currentTile.type == terrainID.grass && currentTile.cityTerritory == this.id) {
+				grassTotal++;
+			}
+			
+		}
+	}
+	return grassTotal;
 }
 
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
-	this.sqSize = 8;
+	this.sqSize = 16;
 	
 	this.canvas = document.getElementById("pocketCivCanvas");
 	this.canvas.width = window.innerWidth;
@@ -507,9 +574,22 @@ Display.prototype.drawTerrain = function() {
 				//if (terrain.tile[i][j].cityPresent !== NONE) {
 				//	this.ctx.fillStyle = "#ff0000";
 				//}
-				
+				//if (terrain.tile[i][j].cityTerritory !== NONE) {
+					//var currentCity = terrain.tile[i][j].cityTerritory;
+					//this.ctx.fillStyle = "#ffffff";
+					//this.ctx.fillText(currentCity.id,i*this.sqSize,j*this.sqSize);
+					
+					//var territoryColour = currentCity.faction.colour;
+					//this.ctx.fillStyle = territoryColour;
+				//}
 				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
-				
+
+				if (terrain.tile[i][j].cityTerritory !== NONE) {
+					this.ctx.globalAlpha=0.5;
+					this.ctx.fillStyle=terrain.tile[i][j].cityTerritory.faction.colour;
+					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize-1, this.sqSize-1);
+					this.ctx.globalAlpha=1;
+				}
 			}
 		}
 	}
@@ -558,7 +638,7 @@ Display.prototype.drawAgents = function() {
 		x = agent[i].x;
 		y = agent[i].y;
 		this.ctx.fillStyle = agent[i].faction.colour;
-		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
+		this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
 
 	}
 }
@@ -570,10 +650,12 @@ Display.prototype.drawStructures = function() {
 	for (var i=0; i<city.length; i++) {
 		x = city[i].x;
 		y = city[i].y;
+		//this.ctx.fillStyle = "#000000";
+		//this.ctx.fillRect(x*sqSize, y*sqSize, sqSize, sqSize);
 		this.ctx.fillStyle = "#bbbbbb";
-		this.ctx.fillRect(x*sqSize, y*sqSize, sqSize, sqSize);
-		this.ctx.fillStyle = city[i].faction.colour;
 		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
+		this.ctx.fillStyle = city[i].faction.colour;
+		this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
 
 	}
 }
