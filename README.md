@@ -8,6 +8,7 @@ Protoyping minimal gameplay loop without art assets.
 Prototype is now playable! Have a gander here:
 https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80ebc68bb/Prototype.html
 
+![What your empire will hopefully look like](https://github.com/AlexMulkerrin/PocketCiv/blob/master/Screenshots/turn%20100%20auspicious%20start.png)
 
 
 
