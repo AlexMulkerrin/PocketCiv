@@ -10,11 +10,17 @@ window.onload = function() {
 	var program = new Program();
 	window.requestAnimationFrame( function(){program.update();} );
 }
+const commandID = {move:0, settle:1, skip:2};
 function Program() {
-	this.timer = 0;
 	this.updateRate = 5;
+	this.createNewProgram();	
+}
+Program.prototype.createNewProgram = function() {
+	this.timer = 0;
 	this.simulation = new Simulation(80,50);
 	this.display = new Display(this.simulation);
+	
+	this.createKeyboardEventHandlers();
 	
 	this.simulation.update();
 	this.display.refresh();
@@ -28,81 +34,256 @@ Program.prototype.update = function() {
 	var t = this;
 	window.requestAnimationFrame( function(){t.update();} );
 }
+Program.prototype.createKeyboardEventHandlers = function() {
+	var t = this;
+	document.onkeydown = function(event) {
+		var keyCode;
+		if (event === null) {
+			keyCode = window.event.keyCode;
+		} else {
+			keyCode = event.keyCode;
+		}
+		switch (keyCode) {
+			case 65:
+            case 37: // a or left arrow
+                t.sendMove(0, -1);
+                break;
+			case 87:
+            case 38: // w or up arrow
+                t.sendMove(-1, 0);
+                break;
+			case 68:
+            case 39: //d or right arrow
+                t.sendMove(0, 1);
+                break;
+			case 83:
+            case 40: // s or down arrow
+                t.sendMove(1, 0);
+                break;
+			case 66: // b key
+				t.sendSettle();
+				break;
+			case 32: // spacebar
+				t.sendSkip();
+				break;	
+			case 13: // enter key
+				t.endTurn();
+				break;
+			case 82: // r key
+				t.resetSim();
+				break;
+			case 27: // escape key
+				t.quitMatch();
+				break;
+			default:
+				t.invalidKeypress();
+				break;
+		}
+	}
+}
+Program.prototype.sendMove = function(dx, dy) {
+	//console.log("TODO movement commands "+dx+", "+dy);
+	this.simulation.currentPlayerInput = [commandID.move, dx, dy];
+}
+Program.prototype.sendSettle = function() {
+	//console.log("TODO settling command");
+	this.simulation.currentPlayerInput = [commandID.settle];
+}
+Program.prototype.sendSkip = function() {
+	//console.log("TODO idle command");
+	this.simulation.currentPlayerInput = [commandID.move,0, 0];
+}
+Program.prototype.endTurn = function() {
+	console.log("TODO end turn command");
+}
+Program.prototype.resetSim = function() {
+	//console.log("TODO reset command");
+	this.createNewProgram();
+}
+Program.prototype.quitMatch = function() {
+	//console.log("TODO quit command");
+	this.simulation.faction[this.simulation.playerFaction].isPlayerControlled = false;
+}
+Program.prototype.invalidKeypress = function() {
+	 console.log("TODO no effect command");
+}
 
 const UNIT_COST = 420;
+const REQUIRED_DESIRABILITY = 14;
 function Simulation(width, height) { //TODO let sim be paused (space) or reset (R)
 	this.isContested = true;
 	this.isRunning = true; 
+	
 	this.generation = 0;
+	this.currentFaction = 0;
+	this.turnStart = true;
+	this.currentFactionDone = false;
+	this.currentAgent = 0;
+	
+	this.currentPlayerInput = [];
+	
 	this.terrain = new Terrain(width, height);
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(8, 0, 1);
+	this.generateStartingFactions(16, 1, 0);
+	
+	this.playerFaction = randomInteger(this.faction.length);
+	this.faction[this.playerFaction].isPlayerControlled = true;
 }
 Simulation.prototype.update = function() { //TODO make agents find new path if required before moving.
 	if (this.isContested) {
-		this.generation++;
-		for (var i=0; i<this.city.length; i++) {
-			city = this.city[i];
-			this.recordSeen(city);
+		this.progressSimGenerations();	
+	}
+}
+Simulation.prototype.progressSimGenerations = function() {
+
+	this.progressFactionTurn();
+	
+	if (this.currentFactionDone) {
+		this.currentFaction++;
+		this.currentFactionDone = false;
+		this.turnStart = true;
+		this.currentAgent = 0;
+		
+		if (this.currentFaction >= this.faction.length) {
+			this.generation++;
+			this.currentFaction = 0;
+		}
+	}
+}
+Simulation.prototype.updateFactionCities = function() {
+	for (var i=0; i<this.city.length; i++) { // production from cities
+		city = this.city[i];
+		if (city.faction.id == this.currentFaction) {
+			//this.recordSeen(city); not needed?
 			city.productionRate = city.getYield();
 			
 			city.stored += city.productionRate;
-			if (city.stored > UNIT_COST ){//&& city.faction.id==1) {
+			if (city.stored > UNIT_COST ) {
 				city.stored -= UNIT_COST;
 				this.agent.push(new Agent(city.x, city.y, city.faction));
 			}
 		}
-		
-		for (var i=0; i<this.agent.length; i++) {
-			this.recordSeen(this.agent[i]);
-			if (this.agent[i].isAlive) {
-				switch (this.agent[i].state) {
-					case stateID.wander:
-						this.randomWalk(this.agent[i]);
-						//this.checkSettling(this.agent[i]);
-					break;
-					
-					case stateID.explore:
-						if (this.agent[i].path.length==0) {
-							// check if agent is in good position to settle
-							//this.checkSettling(this.agent[i]);
-							
-							this.agent[i].hasTarget = this.agent[i].findUnexplored();
-							if (this.agent[i].hasTarget == false) {
-								this.agent[i].state = stateID.wander;
-							}
-						}
-						if (this.agent[i].path.length>0) { 
-							this.progressPath(this.agent[i], i);
-						} 
-						
-					break;
-				}
-			}
+	}
+}
+Simulation.prototype.progressFactionTurn = function() {
+	if (this.turnStart) {
+		this.updateFactionCities();
+		this.turnStart = false;
+	}
+
+	//AI factions don't wait for user input
+	aiTurnContinue = true;
+	while (aiTurnContinue && this.currentFactionDone == false) {
+		if (this.faction[this.currentFaction].isPlayerControlled) {
+			aiTurnContinue = false;
+		}
+	
+		// get next agent of faction
+		while (	this.currentAgent<this.agent.length && 
+				this.agent[this.currentAgent].faction.id !== this.currentFaction ) {
+			this.currentAgent++;
 			
 		}
-		var newAgentList = [];
-		for (var i=0; i<this.agent.length; i++) {
-			if (this.agent[i].isAlive) {
-				this.showVision(this.agent[i]);
-				//put settle check here?
-				this.checkSettling(this.agent[i]);
-				// if not settled continue to be an agent.
+
+		// if valid agent resolve movement
+		if (this.currentAgent < this.agent.length) {
+			if (this.faction[this.currentFaction].isPlayerControlled) {
+				this.checkPlayerInput();
+			} else {
+				this.progressComputerAgent();
+			}
+		} else {
+			// resolve end of faction turn events.
+			var newAgentList = [];
+			for (var i=0; i<this.agent.length; i++) { // remove dead agents get agent vision
 				if (this.agent[i].isAlive) {
-					newAgentList.push(this.agent[i]);
-				}
-			} 
-		}
-		this.agent = newAgentList;
+					this.showVision(this.agent[i]);
+					// if not settled continue to be an agent.
+					if (this.agent[i].isAlive) {
+						newAgentList.push(this.agent[i]);
+					}
+				} 
+			}
+			this.agent = newAgentList;
+			
+			for (var i=0; i<this.city.length; i++) { // get city vision
+				this.showVision(this.city[i], true);
+			}
+			this.currentFactionDone = true;
+		}	
+
+	}
+}
+Simulation.prototype.checkPlayerInput = function() { 
+	var hasMoved = false;
+	var agent = this.agent[this.currentAgent];
 		
-		for (var i=0; i<this.city.length; i++) {
+		if (agent.isAlive) {
+			// check to see if player has given command
+			if (this.currentPlayerInput.length > 0) {
+			
+				switch (this.currentPlayerInput[0]) {
+					case commandID.move:
+						this.recordSeen(agent); // is this the better place for this?
+						// WARNING dx, dy are flipped in game space?
+						var dx = this.currentPlayerInput[2];
+						var dy = this.currentPlayerInput[1];
+						hasMoved = this.tryMovement(agent, dx, dy);
+						break;
+					case commandID.settle:
+						hasMoved = this.checkSettling(agent);
+				}
+			}
+		
+		} else {
+			hasMoved = true;
+		}
+		
+		if (hasMoved) {
+			 this.currentPlayerInput = [];
+			if (agent.isAlive) {
+				this.showVision(agent);
+			}
+		
+			for (var i=0; i<this.city.length; i++) { // get city vision
+				this.showVision(this.city[i]);
+			}
+			this.currentAgent++;
+		}
+}
+Simulation.prototype.progressComputerAgent = function() { 
+	var agent = this.agent[this.currentAgent];
+		this.recordSeen(agent);
+		if (agent.isAlive) {
+			switch (agent.state) {
+				case stateID.wander:
+					this.randomWalk(agent);
+				break;
+				
+				case stateID.explore:
+					if (agent.path.length==0) {	
+						agent.hasTarget = agent.findUnexplored();
+						if (agent.hasTarget == false) {
+							agent.state = stateID.wander;
+						}
+					}
+					if (agent.path.length>0) { 
+						this.progressPath(agent, this.currentAgent);
+					} 
+				break;
+			}
+		}
+		// get new vision and check for settling
+		if (agent.isAlive) {
+			this.showVision(agent);
+			this.checkSettling(agent);
+		}
+		for (var i=0; i<this.city.length; i++) { // get city vision
 			this.showVision(this.city[i]);
 		}
-	
-	}
-	
+		this.currentAgent++;
 }
 Simulation.prototype.generateStartingFactions = function(numFactions, numAgents, numCities) {
 	var x = 0,y = 0, found = false;
@@ -114,8 +295,10 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents,
 			var pos = this.terrain.getValidPosition();
 			
 			var newAgent = new Agent(pos.x, pos.y, newFaction);
+			newAgent.state = stateID.wander;
 			this.terrain.tile[pos.x][pos.y].occupiers.push(newAgent);
 			this.agent.push(newAgent);
+			this.showVision(newAgent);
 		}
 		for (var j=0; j<numCities; j++) {
 			var pos = this.terrain.getValidPosition();
@@ -126,6 +309,19 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents,
 			this.city.push(newCity);
 		}
 	}
+}
+Simulation.prototype.tryMovement = function(agent, dx, dy) {
+	var nx = agent.x + dx;
+	var ny = agent.y + dy;
+	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		this.resolveAgentOccupations(agent, nx, ny);
+		agent.x = nx;
+		agent.y = ny;		
+		return true;
+		
+	} else {
+		return false
+	}	
 }
 Simulation.prototype.randomWalk = function(agent) {
 	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
@@ -154,7 +350,7 @@ Simulation.prototype.progressPath = function(agent, index) {
 		agent.path = [];
 	}
 }
-Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) { // TODO think about best implementation...
+Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) { 
 	var start = this.terrain.tile[agent.x][agent.y];
 	
 	// remove agent objref from start tile occupiers list
@@ -175,6 +371,7 @@ Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) { // TODO
 				dest.occupiers.push(agent); 
 				// flip city too!
 				if (dest.cityPresent !== NONE) {
+					this.recordSeen(dest.cityPresent, true);
 					dest.cityPresent.faction = agent.faction;
 				}
 				
@@ -184,10 +381,19 @@ Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) { // TODO
 			dest.occupiers.push(agent); 
 		}
 	} else {
-		// nobody in new tile
-		dest.occupiers.push(agent); 
-		if (dest.cityPresent !== NONE) {
-			dest.cityPresent.faction = agent.faction;
+		// check empty tile for city
+		
+		if (dest.cityPresent !== NONE && dest.cityPresent.faction != agent.faction) { // fight city
+			var dummyAgent = {};
+			var combatResult = this.resolveCombat(agent, dummyAgent);
+			if (combatResult == true) {
+				this.recordSeen(dest.cityPresent, true);
+				dest.cityPresent.faction = agent.faction;
+				dest.occupiers.push(agent);
+				
+			}
+		} else {
+			dest.occupiers.push(agent); 
 		}
 	}
 }
@@ -195,6 +401,9 @@ Simulation.prototype.resolveCombat = function(attacker, defender) {
 	var attackerWon = randomBool(); 
 	if (attackerWon) {
 		defender.isAlive = false;
+		if (defender.faction) { //sometimes null in case of empty city
+			this.recordSeen(defender); //hope this works!
+		}
 		return true;
 	} else {
 		attacker.isAlive = false;
@@ -203,10 +412,10 @@ Simulation.prototype.resolveCombat = function(attacker, defender) {
 }
 Simulation.prototype.checkSettling = function(agent) {
 	var desireResult = agent.faction.visionMap.checkDesirability(agent.x, agent.y)
-	if (desireResult.unknown == 0 && desireResult.grass == 21) {
+	if (desireResult.unknown == 0 && desireResult.grass > REQUIRED_DESIRABILITY) {
 	
 		var cityTile = this.terrain.tile[agent.x][agent.y];
-		// remove agent objref from start tile occupiers list
+		// remove agent obj ref from start tile occupiers list
 		cityTile.occupiers = cityTile.occupiers.filter(function(a){return (a !== agent)});
 		var index = this.city.length;
 		
@@ -217,14 +426,19 @@ Simulation.prototype.checkSettling = function(agent) {
 		
 		// now settled the agent no longer exists.
 		agent.isAlive = false;
+		return true;
 	}
+	return false;
 }
-Simulation.prototype.showVision = function(agent) { // Can be agent or structure as argument!
+Simulation.prototype.showVision = function(agent, isStructure) { 
 	var x,y,factionVision;
-	var adj = [ [0,0],
-		[-1,0], [1,0], [0,-1], [0,1],
-		[-1,-1], [-1,1], [1,-1], [1,1]
-	];
+	var adj = [];
+	if (isStructure) {
+		adj = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],
+		[1,-1],[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	} else {
+		adj =[ [0,0],[-1,0], [1,0], [0,-1], [0,1],[-1,-1], [-1,1], [1,-1], [1,1] ];
+	}
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
 		y = agent.y + adj[i][1];
@@ -239,13 +453,17 @@ Simulation.prototype.showVision = function(agent) { // Can be agent or structure
 		}
 	}
 }
-Simulation.prototype.recordSeen = function(agent) { //TODO make sure to update 'fatcross' range of desirability modification...
+Simulation.prototype.recordSeen = function(agent, isStructure) {
 	var x,y;
 	var factionVision = agent.faction.visionMap;
-	var adj = [ [0,0],
-		[-1,0], [1,0], [0,-1], [0,1],
-		[-1,-1], [-1,1], [1,-1], [1,1]
-	];
+	var adj =[];
+	if (isStructure) {
+		adj = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],
+		[1,-1],[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+	} else {
+		adj =[ [0,0],[-1,0], [1,0], [0,-1], [0,1],[-1,-1], [-1,1], [1,-1], [1,1] ];
+	}
+	
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
 		y = agent.y + adj[i][1];
@@ -264,6 +482,8 @@ Simulation.prototype.foundCity = function(city) {
 		ny = city.y  + fatCross[i][1];
 		if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].cityTerritory == NONE) {
 			this.terrain.tile[nx][ny].cityTerritory = city;
+			//will this work?
+			this.faction[city.faction.id].visionMap.tile[nx][ny].cityTerritory = city.id;
 		}
 	}
 }
@@ -284,6 +504,7 @@ function Terrain(inWidth, inHeight) {
 	this.generateLandmass();
 	this.islandStats = [];
 	this.identifyIslands();
+	this.identifyCoast();
 	this.checkGlobalDesirability();
 }
 Terrain.prototype.generateLandmass = function() {
@@ -313,8 +534,31 @@ Terrain.prototype.generateLandmass = function() {
 		}
 	}
 }
-Terrain.prototype.identifyCoast = function() { // TODO
-
+Terrain.prototype.identifyCoast = function() { 
+	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
+	for (var i=0; i<this.width; i++) {
+		for (var j=0; j<this.height; j++) {
+			if (this.tile[i][j].type == terrainID.grass) {
+				for (var e=0; e<adj.length; e++) {
+					var nx = i + adj[e][0];
+					var ny = j + adj[e][1];
+					if (this.isInBounds(nx,ny) && this.tile[nx][ny].type == terrainID.water)
+						this.tile[i][j].isCoast = true;	
+				}
+			}
+			
+			// find coastal waters
+			if (this.tile[i][j].type == terrainID.water) {
+				for (var e=0; e<adj.length; e++) {
+					var nx = i + adj[e][0];
+					var ny = j + adj[e][1];
+					if (this.isInBounds(nx,ny) && this.tile[nx][ny].type == terrainID.grass)
+						this.tile[i][j].isCoast = true;	
+				}
+			}
+			
+		}
+	}
 }
 Terrain.prototype.identifyIslands = function() {
 	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
@@ -425,10 +669,16 @@ function Tile(inTerrainID) {
 	this.islandID = NONE;
 }
 
+const factionColours = ["#798EFF", "#4CFF00", "#FFD800", "#FF0000", "#B200FF", "#FF6A00", "#FFFFFF", "#606060", "#22B14C", "#880015", "#99D9EA", "#000000", "#3F48CC", "#7F6A00", "#FF00FF", "#D4D4D4"];
 function Faction(idIn) {
 	this.id = idIn
 	this.name = "Faction #"+idIn;
-	this.colour = randomRGBString();
+	this.isPlayerControlled = false;
+	if (this.id < factionColours.length) {
+		this.colour = factionColours[this.id];
+	} else {
+		this.colour = randomRGBString();
+	}
 	this.visionMap = [];
 }
 
@@ -581,6 +831,7 @@ Structure.prototype.getYield = function() {
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
 	this.sqSize = 16;
+	this.fontSize = 16;
 	
 	this.canvas = document.getElementById("pocketCivCanvas");
 	this.canvas.width = window.innerWidth;
@@ -590,16 +841,20 @@ function Display(inSimulation) {
 Display.prototype.refresh = function() {
 	this.ctx.fillStyle = "#d0e4fe";
 	this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
-	this.drawTerrain();
+	//this.drawTerrain();
+	this.playerVision();
+	
 	this.drawAgents();
 	this.drawStructures();
-	var dx,dy;
-	for (var i=0; i<this.targetSim.faction.length; i++) {
-		dx = (i+1)%3;
-		dy = Math.floor((i+1)/3);
-		this.drawVision(this.targetSim.faction[i], dx, dy);
-	}
+	//var dx,dy;
+	//for (var i=0; i<this.targetSim.faction.length; i++) {
+	//	dx = (i+1)%3;
+	//	dy = Math.floor((i+1)/3);
+	//	this.drawVision(this.targetSim.faction[i], dx, dy);
+	//}
+	this.drawCurrentAgent();
 	this.drawStats();
+	
 }
 Display.prototype.drawTerrain = function() {
 	var terrain = this.targetSim.terrain;
@@ -633,7 +888,9 @@ Display.prototype.drawTerrain = function() {
 					//var territoryColour = currentCity.faction.colour;
 					//this.ctx.fillStyle = territoryColour;
 				//}
-
+				if (terrain.tile[i][j].isCoast) {
+					this.ctx.fillStyle = "#ADA779";
+				}
 				
 				
 				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
@@ -643,10 +900,72 @@ Display.prototype.drawTerrain = function() {
 				if (terrain.tile[i][j].cityTerritory !== NONE) {
 					this.ctx.globalAlpha=0.5;
 					this.ctx.fillStyle=terrain.tile[i][j].cityTerritory.faction.colour;
-					this.ctx.fillRect( i*this.sqSize+1, j*this.sqSize+1, this.sqSize-2, this.sqSize-2);
+					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
 					this.ctx.globalAlpha=1;
 				}
+				
+			} else if (terrain.tile[i][j].isCoast) {
+				this.ctx.fillStyle = "#5897B7";
+				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
 			}
+		}
+	}
+}
+Display.prototype.playerVision = function() {
+	var terrain = this.targetSim.terrain;
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	this.ctx.fillStyle = "#444444";
+	this.ctx.fillRect(0,0,map.width*this.sqSize, map.height*this.sqSize);
+	
+	for (var i=0; i<terrain.width ; i++) {
+		for (var j=0; j<terrain.height ; j++) {
+			if (map.tile[i][j].state == visionID.visible) {
+			
+			}
+			if (map.tile[i][j].type == terrainID.grass) {
+				var desire = terrain.tile[i][j].desirability;
+				if (desire == 21) {
+					this.ctx.fillStyle = "#4B7F3F";
+				} else if (desire > REQUIRED_DESIRABILITY){
+					this.ctx.fillStyle = "#89A050";
+				} else {
+					this.ctx.fillStyle = "#ADA779";
+				}
+
+				// coast colouration *should* be automatic
+				//if (terrain.tile[i][j].isCoast) {
+				//	this.ctx.fillStyle = "#ADA779";
+				//}
+				
+				
+				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
+				
+				if (terrain.tile[i][j].cityTerritory !== NONE) {
+					this.ctx.globalAlpha=0.5;
+					this.ctx.fillStyle=terrain.tile[i][j].cityTerritory.faction.colour;
+					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
+					this.ctx.globalAlpha=1;
+				}
+				
+			} else if (map.tile[i][j].type == terrainID.water) {
+				// only one colour of water for now...
+				//if (terrain.tile[i][j].isCoast) {
+					this.ctx.fillStyle = "#5897B7";
+				//} else {
+				//	this.ctx.fillStyle = "#005784";
+				//}
+				this.ctx.fillRect(i*this.sqSize,j*this.sqSize,this.sqSize,this.sqSize);
+			}
+			
+			
+		// show explored areas:
+			if (map.tile[i][j].state == visionID.seen) {
+				this.ctx.globalAlpha=0.5;
+				this.ctx.fillStyle="#000000";
+				this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
+				this.ctx.globalAlpha=1;
+			}
+		
 		}
 	}
 }
@@ -686,19 +1005,24 @@ Display.prototype.drawVision = function(faction, dx, dy) {
 	//this.ctx.fillRect(offsetX+agent.x*this.sqSize+1, offsetY+agent.y*this.sqSize+1, this.sqSize-2, this.sqSize-2);
 }
 Display.prototype.drawAgents = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	var x, y, factionID;
 	var sqSize = this.sqSize;
 	var agent = this.targetSim.agent;
 	
 	for (var i=0; i<agent.length; i++) {
-		x = agent[i].x;
-		y = agent[i].y;
-		this.ctx.fillStyle = agent[i].faction.colour;
-		this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
-
+		if (agent[i].isAlive) {
+			x = agent[i].x;
+			y = agent[i].y;
+			if (map.tile[x][y].state == visionID.visible) {
+				this.ctx.fillStyle = agent[i].faction.colour;
+				this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
+			}
+		}
 	}
 }
 Display.prototype.drawStructures = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	var x, y, factionID;
 	var sqSize = this.sqSize;
 	var city = this.targetSim.city;
@@ -708,16 +1032,42 @@ Display.prototype.drawStructures = function() {
 		y = city[i].y;
 		//this.ctx.fillStyle = "#000000";
 		//this.ctx.fillRect(x*sqSize, y*sqSize, sqSize, sqSize);
-		this.ctx.fillStyle = "#bbbbbb";
-		this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
-		this.ctx.fillStyle = city[i].faction.colour;
-		this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
+		if (map.tile[x][y].state == visionID.visible) {
+			this.ctx.fillStyle = "#bbbbbb";
+			this.ctx.fillRect(x*sqSize+1, y*sqSize+1, sqSize-2, sqSize-2);
+			this.ctx.fillStyle = city[i].faction.colour;
+			this.ctx.fillRect(x*sqSize+2, y*sqSize+2, sqSize-4, sqSize-4);
+		}
 
 	}
 }
+Display.prototype.drawCurrentAgent = function() {
+	var sim = this.targetSim;
+	if (sim.faction[sim.currentFaction].isPlayerControlled && sim.currentAgent<sim.agent.length) {
+		var agent = this.targetSim.agent[this.targetSim.currentAgent];
+		if (agent.faction.id == sim.playerFaction) {
+			var sqSize = this.sqSize;
+			this.ctx.fillStyle = "#00ff00";
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, 1, sqSize);
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, sqSize, 1);
+			this.ctx.fillRect(agent.x*sqSize+sqSize-1, agent.y*sqSize, 1, sqSize);
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize+sqSize-1, sqSize, 1);
+		}
+	}
+}
 Display.prototype.drawStats = function() { //TODO split this into calculation and display
-	this.ctx.fillStyle = "#ffffff";
-	this.ctx.fillText("Turn: "+this.targetSim.generation,5,12);
+	var isGameOver = false;
+	var offsetY = this.targetSim.terrain.width*this.sqSize+this.fontSize;
+	this.ctx.fillStyle = "#444488";
+	this.ctx.font = "bold "+this.fontSize+"px Arial";
+	var output = "Turn: "+this.targetSim.generation;
+	if (this.targetSim.currentFaction == this.targetSim.playerFaction) {
+		output += ", Civ: "+ this.targetSim.currentFaction;//+" (you)";
+	} else {
+		output += ", Civ: "+this.targetSim.currentFaction;
+	}
+	//output += ", Agent: "+this.targetSim.currentAgent;
+	this.ctx.fillText(output,offsetY,this.fontSize);
 	
 	var contested = false;
 	var islandOccupation = [];
@@ -727,18 +1077,22 @@ Display.prototype.drawStats = function() { //TODO split this into calculation an
 			islandOccupation[i][j] = false;
 		}
 	}
-	
+	this.ctx.fillText("Player stats: ",offsetY,this.fontSize*3);
 	// faction stats
 	for (var i=0; i<this.targetSim.faction.length; i++) {
 		var output = "";
-		output += this.targetSim.faction[i].name+": ";
+		//output += this.targetSim.faction[i].name+": ";
 		var unitTotal = 0;
 		var cityTotal = 0;
 		for (var j=0; j<this.targetSim.agent.length; j++) {
 			if (this.targetSim.agent[j].faction.id == i) {
 				unitTotal++;
+				var agent = this.targetSim.agent[j];
+				var islandID = this.targetSim.terrain.tile[agent.x][agent.y].islandID;
+				islandOccupation[islandID][i] = true;
 			}
 		}
+		
 		for (var j=0; j<this.targetSim.city.length; j++) {
 			if (this.targetSim.city[j].faction.id == i) {
 				cityTotal++;
@@ -747,38 +1101,61 @@ Display.prototype.drawStats = function() { //TODO split this into calculation an
 				islandOccupation[islandID][i] = true;
 			}
 		}
-		if (cityTotal==0 && unitTotal==0) {
-			output += "--- DEAD CIV ---";
-		} else {
-			output += "cities: "+cityTotal+", units: "+unitTotal;
+		if (i == this.targetSim.playerFaction) {
+			if (cityTotal==0 && unitTotal==0) {
+				output += "--- DEAD CIV ---";
+				isGameOver = true;
+			} else {
+				output += "cities: "+cityTotal+", units: "+unitTotal;
+				if (unitTotal == 0) {
+					this.ctx.fillText("Waiting for unit to be built...",offsetY,this.fontSize*5);
+				}
+			}
+			this.ctx.fillText(output,offsetY,this.fontSize*4);
 		}
-		this.ctx.fillText(output,5,12*i+24);
 	}
 	// island stats
+	var isPlayerIsland = false;
 	for (var i=0; i<this.targetSim.terrain.islandStats.length; i++) {
-		var output = "Isle #"+i+": ";
-		output += "size: " + this.targetSim.terrain.islandStats[i]+"\t\t ";
+		isPlayerIsland = false;
+		var output = "";//"Isle #"+i+": ";
+		
 		var numOccupiers = 0;
 		for (var j=0; j<this.targetSim.faction.length; j++) {
 			if (islandOccupation[i][j]) {
-				output += "#"+j+", ";
+				if (j == this.targetSim.playerFaction) {
+					isPlayerIsland = true;
+				}
 				numOccupiers++;
 			}
 		}
 		if (numOccupiers == 0) {
-			output += "uninhabited";
+			output += "none";
 		} else if (numOccupiers == 1) {
 			output += "--- DOMINATED ---";
 		} else {
-			output += "Contested...";
+			output += "Contested... ("+numOccupiers+" civs)";
 			contested = true;
 		}
 			
-		this.ctx.fillText(output,5,12*i+150);
+		if (isPlayerIsland) {
+			this.ctx.fillText("Landmass size: "+this.targetSim.terrain.islandStats[i],offsetY,this.fontSize*7);
+			this.ctx.fillText(output,offsetY,this.fontSize*8);
+			if (numOccupiers == 1) {
+				isGameOver = true;
+			}
+		}
 	}
+	
+	// check for game over and (very unlikely) total domination
+	this.ctx.fillStyle = "#ff88ff";
 	if (contested == false) {
 		this.targetSim.isContested = false;
 		this.ctx.fillText("--- GAME OVER ---", 300, 200);
+	}
+	
+	if (isGameOver) {
+		this.ctx.fillText("Press (R) to restart",offsetY,this.fontSize*10);
 	}
 }
 
