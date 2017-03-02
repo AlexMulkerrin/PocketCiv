@@ -1,7 +1,7 @@
 # PocketCiv
-Minimal Civilsation-like game. Made a pathfinder and wanting to use it in a project :)
+Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a project :)
 
-current status 28/2/2017:
+current status 2/3/2017:
 
 Protoyping minimal gameplay loop without art assets.
 
