@@ -13,28 +13,28 @@ Tested on IE##, Edge, Safari and Opera. No guarantee of complete compatibility o
 PocketCiv requires no copyright license agreement. You are free to download and tweak the bits and bytes to your hearts content. < license to share but not take credit for and sell unaltered >
 
 Reference chart for terrain in default tilesets:
-Ocean: blue seas :)
-Barren Land: desert/arctic/alpine/jungle(?) terrain
-Fertile Land: everything else
+* Ocean: blue seas :)
+* Barren Land: desert/arctic/alpine/jungle(?) terrain
+* Fertile Land: everything else
 
 Features:
-Sea Ice: blocks sea movement at poles? (have be land?)
-Hills: defense boost
-Mountains: high defense boost, not fertile
-Grassland: indicates medium quality city locations
-Forest: indicates naturally good city locations
-River: gives movement bonus like roads
+* Sea Ice: blocks sea movement at poles? (have be land?)
+* Hills: defense boost
+* Mountains: high defense boost, not fertile
+* Grassland: indicates medium quality city locations
+* Forest: indicates naturally good city locations
+* River: gives movement bonus like roads
 
 Improvements:
-City: most important objects in an empire
-Road: connect cities and gives units moving on them a 3x movement bonus
-Exploitation: mine/irrigation. gives rough idea of how much production city is using on support
-Borders: encircle city's territories, fix at moment of settling (perhaps start small?) will flip to faction owning the city they belong to.
-Sea route: abstract indicator showing inter-island connections. Can be disrupted by blockading an endpoint harbour.
+* City: most important objects in an empire
+* Road: connect cities and gives units moving on them a 3x movement bonus
+* Exploitation: mine/irrigation. gives rough idea of how much production city is using on support
+* Borders: encircle city's territories, fix at moment of settling (perhaps start small?) will flip to faction owning the city they belong to.
+* Sea route: abstract indicator showing inter-island connections. Can be disrupted by blockading an endpoint harbour.
 
 Units:
-army: restricted to land tiles, movement of 1 tile a turn, has 50% combat odds. Needs supply line or will be in danger of attrition effects. 5 supply upkeep. Sees 1 tile over land, 2 tiles across coastal waters. Options to settle new city or fortify in defense of location. Can embark. Will be routed if defeated in a stack of units outside of a city with defenses.
-navy: formed when army embarks from coastal city. Has improved movement rate over ocean tiles (3 move per turn) has vision range of 2 over ocean but only 1 onto land. If moved onto land disembarks and returns to army form, ending it's movement. Double upkeep of 10 supply. Supplied through coastal cities across ocean. Vulnerable in stacks similar to land units. Half combat strength (25%) if attacking a land tile. Can pass into a friendly city tile without disembarking (Panama canal anyone?) land units suffer half combat strength if they attempt to engage a coastal fleet (25%) but the situation is reversed if the ships are inside a coastal city (at port) Lack of supply causes chance of attrition similar to land armies.
+* army: restricted to land tiles, movement of 1 tile a turn, has 50% combat odds. Needs supply line or will be in danger of attrition effects. 5 supply upkeep. Sees 1 tile over land, 2 tiles across coastal waters. Options to settle new city or fortify in defense of location. Can embark. Will be routed if defeated in a stack of units outside of a city with defenses.
+* navy: formed when army embarks from coastal city. Has improved movement rate over ocean tiles (3 move per turn) has vision range of 2 over ocean but only 1 onto land. If moved onto land disembarks and returns to army form, ending it's movement. Double upkeep of 10 supply. Supplied through coastal cities across ocean. Vulnerable in stacks similar to land units. Half combat strength (25%) if attacking a land tile. Can pass into a friendly city tile without disembarking (Panama canal anyone?) land units suffer half combat strength if they attempt to engage a coastal fleet (25%) but the situation is reversed if the ships are inside a coastal city (at port) Lack of supply causes chance of attrition similar to land armies.
 
 # Introduction
 * Introduction
