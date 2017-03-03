@@ -1,3 +1,5 @@
+Design Document is going to be very similar to what I hope the final game's manual looks like, hence the layout into 5 broad categories: Introduction, World, Cities, Dynamics and Notes.
+
 # Technical Supplement (is this the readme?)
 Repository Contents
 Required device capabilities:
