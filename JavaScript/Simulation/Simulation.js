@@ -4,7 +4,7 @@
 const UNIT_COST = 420;
 const REQUIRED_DESIRABILITY = 14;
 
-// Class handles all updates of the game simulation, 
+// Class handles all updates of the game simulation,
 // Separates global simulation from per client state
 // Contains:
 // * Terrain
@@ -14,5 +14,13 @@ const REQUIRED_DESIRABILITY = 14;
 //
 // Constructor takes dimensions to pass to Terrain sub module
 function Simulation(width, height) {
+	this.isContested = true;
+	this.isRunning = true;
 
+	this.generation = 0;
+}
+Simulation.prototype.update = function() {
+	if (this.isRunning) {
+		this.generation++;
+	}
 }
