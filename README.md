@@ -1,13 +1,13 @@
 # PocketCiv
 Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a project :)
 
-current status 2/3/2017:
-
-Protoyping minimal gameplay loop without art assets.
-
-Prototype is now playable! Have a gander here:
+current status 6/3/2017:
+- Been working on documentation and new code base structure, also blog posting about improved art :D 
+http://tangentialtopics.blogspot.com/2017/03/pocketciv-prototype.html
+ 
+- 2/3/2017: Prototype is now playable! Have a gander here:
 https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80ebc68bb/Prototype.html
-
+- 13/2/2017: Protoyping minimal gameplay loop without art assets.
 
 ## Controls
 * wasd/arrow keys to move selected unit
