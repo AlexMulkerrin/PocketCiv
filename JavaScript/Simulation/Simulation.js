@@ -16,9 +16,13 @@ const REQUIRED_DESIRABILITY = 14;
 function Simulation(width, height) {
 	this.isContested = true;
 	this.isRunning = true;
+	this.isDebugMode = false;
 
 	this.generation = 0;
+
+	this.terrain = new Terrain(width, height);
 }
+// TODO commentary
 Simulation.prototype.update = function() {
 	if (this.isRunning) {
 		this.generation++;

@@ -920,7 +920,7 @@ Display.prototype.playerVision = function() {
 	for (var i=0; i<terrain.width ; i++) {
 		for (var j=0; j<terrain.height ; j++) {
 			if (map.tile[i][j].state == visionID.visible) {
-			
+				//redundant??
 			}
 			if (map.tile[i][j].type == terrainID.grass) {
 				var desire = terrain.tile[i][j].desirability;

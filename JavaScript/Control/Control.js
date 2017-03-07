@@ -1,4 +1,4 @@
-
+// TODO header commentary
 const commandID = {	move:0, settle:1, skip:2, fortify:3,
 					goto:4, cycle:5, disband:6, deselect:7};
 
