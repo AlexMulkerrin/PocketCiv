@@ -7,5 +7,13 @@ const factionColours = ["#798EFF", "#4CFF00", "#FFD800", "#FF0000", "#B200FF", "
 //
 // Constructor takes ID number to refer to this faction within containing array
 function Faction(inID) {
-
+	this.id = inID;
+	this.name = randomName();
+	this.isPlayerControlled = false;
+	if (this.id < factionColours.length) {
+		this.colour = factionColours[this.id];
+	} else {
+		this.colour = randomRGBString();
+	}
+	this.visionMap = {};
 }

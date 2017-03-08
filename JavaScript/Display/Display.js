@@ -1,7 +1,10 @@
 // Display class, root of display module
 
 //
-const interfaceColours = {background:"#444444", text:"#ffffff", land:"#89A050", water:"#5897B7"};
+const interfaceColours = {
+	background:"#444444", text:"#ffffff", land:"#89A050",
+	water:"#5897B7", unseen:"#000000"
+};
 
 // Class handles all rendering operations to screen
 // Takes information from the following modules to display:
@@ -44,6 +47,8 @@ Display.prototype.resizeCanvas = function() {
 Display.prototype.refresh = function() {
 	this.clearScreen();
 	this.drawMainMap();
+	this.drawFogOfWar();
+	this.drawAgents();
 	if (this.targetSim.isDebugMode) this.showDebugInfo();
 }
 Display.prototype.clearScreen = function() {
@@ -51,11 +56,19 @@ Display.prototype.clearScreen = function() {
 	this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
 }
 Display.prototype.drawMainMap = function() {
-	var terrain = this.targetSim.terrain;
-	for (var i=0; i<terrain.width; i++) {
-		for (var j=0; j<terrain.height; j++) {
-			if (terrain.tile[i][j].type == terrainID.grass) {
-				switch (terrain.tile[i][j].desirability) {
+
+
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	if (this.targetSim.isDebugMode) {
+		//map = this.targetSim.terrain;
+	}
+	this.ctx.fillStyle = interfaceColours.unseen;
+	this.ctx.fillRect(0,0,map.width*this.sqSize, map.height*this.sqSize);
+
+	for (var i=0; i<map.width; i++) {
+		for (var j=0; j<map.height; j++) {
+			if (map.tile[i][j].type == terrainID.grass) {
+				switch (map.tile[i][j].desirability) {
 					case ratingID.perfect:
 						this.drawTile(i*this.sqSize,j*this.sqSize, 3);
 						break;
@@ -69,9 +82,9 @@ Display.prototype.drawMainMap = function() {
 						this.drawTile(i*this.sqSize,j*this.sqSize, 1);
 						break;
 				}
-			} else if (terrain.tile[i][j].type == terrainID.water) {
-				if (terrain.tile[i][j].isCoast) {
-					this.drawCoastTile(i*this.sqSize,j*this.sqSize, terrain.tile[i][j]);
+			} else if (map.tile[i][j].type == terrainID.water) {
+				if (map.tile[i][j].isCoast) {
+					this.drawCoastTile(i*this.sqSize,j*this.sqSize, map.tile[i][j]);
 				} else {
 					this.drawTile(i*this.sqSize,j*this.sqSize, 0);
 				}
@@ -79,7 +92,45 @@ Display.prototype.drawMainMap = function() {
 
 		}
 	}
-
+}
+Display.prototype.drawAgents = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	var x, y, factionID;
+	var agent = this.targetSim.agent;
+	for (var i=0; i<agent.length; i++) {
+		if (agent[i].isAlive) {
+			x = agent[i].x;
+			y = agent[i].y;
+			if (map.tile[x][y].state == visionID.seen) {
+				this.drawTile(x*this.sqSize,y*this.sqSize, 4);
+			}
+		}
+	}
+}
+Display.prototype.drawFogOfWar = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	// totally unknown
+	for (var i=0; i<map.width; i++) {
+		for (var j=0; j<map.height; j++) {
+			if (map.tile[i][j].state == visionID.seen) {
+				this.drawAdjacentFog(i, j, map);
+			}
+		}
+	}
+}
+Display.prototype.drawAdjacentFog = function(x, y, visionMap) {
+	var adj = [ [0,-1],[0,1], [-1,0], [1,0] ];
+	for (var e=0; e<adj.length; e++) {
+		var nx = x + adj[e][0];
+		var ny = y + adj[e][1];
+		if (visionMap.isInBounds(nx,ny) && visionMap.tile[nx][ny].state == visionID.unseen){
+			if (e>1) {
+				this.drawHalfTile(x*this.sqSize,y*this.sqSize, 15, e);
+			} else {
+				this.drawHalfTile(x*this.sqSize,y*this.sqSize, 14, e);
+			}
+		}
+	}
 }
 Display.prototype.showDebugInfo = function() {
 	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
@@ -88,7 +139,6 @@ Display.prototype.showDebugInfo = function() {
 	this.ctx.fillText("Window: "+this.canvas.width+" by "+this.canvas.height, offsetX, this.fontSize*2);
 	this.ctx.fillText("SqSize: "+this.sqSize, offsetX, this.fontSize*3);
 
-
 	for (var i=0; i<this.targetSim.terrain.regionDetails.length; i++) {
 		var output = this.targetSim.terrain.regionDetails[i].name;
 		//output += "size: " + this.targetSim.terrain.islandStats[i];
@@ -96,9 +146,9 @@ Display.prototype.showDebugInfo = function() {
 		output += " (" + this.targetSim.terrain.regionDetails[i].size+")";
 		this.ctx.fillText(output,offsetX,this.fontSize*(i+4));
 	}
-
 	this.ctx.drawImage(this.tileset,offsetX,this.canvas.height-this.tileset.height);
 }
+// tile manipulation
 Display.prototype.drawCoastTile = function(x, y, tile) {
 	var index = 19;
 	var adjIndexes = [ [0,1,2], [4,3,2], [4,5,6], [0,7,6] ];
@@ -131,6 +181,18 @@ Display.prototype.drawQuarterTile = function(x, y, index, quarterID) {
 	var qx = x + quarterPos[quarterID][0];
 	var qy = y + quarterPos[quarterID][1];
 	this.ctx.drawImage(this.tileset, sx, sy, 8, 8, qx, qy, 8*this.scale, 8*this.scale);
+}
+Display.prototype.drawHalfTile = function(x, y, index, halfID) {
+	var halfPos = [ [0,0], [0,8], [0,0], [8,0] ];
+	var sx = (index % 4)*17 + halfPos[halfID][0];
+	var sy = Math.floor(index/4)*17 + halfPos[halfID][1];
+	var qx = x + halfPos[halfID][0];
+	var qy = y + halfPos[halfID][1];
+	if (halfID>1) {
+		this.ctx.drawImage(this.tileset, sx, sy, 8, 16, qx, qy, 8*this.scale, 16*this.scale);
+	} else {
+		this.ctx.drawImage(this.tileset, sx, sy, 16, 8, qx, qy, 16*this.scale, 8*this.scale);
+	}
 }
 Display.prototype.drawTile = function(x, y, index) {
 	var sx = (index % 4)*17;

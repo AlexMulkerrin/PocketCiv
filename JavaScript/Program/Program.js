@@ -20,11 +20,13 @@ function Program() {
 Program.prototype.createNewProgram = function() {
 	this.timer = 0;
 	this.simulation = new Simulation(80, 50);
+	//enable debug mode for extra stats and info
+	this.simulation.isDebugMode = true;
+
 	this.control = new Control(this); // will this memory leak? D:
 	this.display = new Display(this.simulation);
 
-	//enable debug mode for extra stats and info
-	this.simulation.isDebugMode = true;
+
 }
 // main update method, fires on every animation frame (60fps unless browser tab loses focus)
 Program.prototype.update = function() {
@@ -34,5 +36,5 @@ Program.prototype.update = function() {
 		this.display.refresh();
 	}
 	var t = this;
-	window.requestAnimationFrame( function(){t.update();} );
+//	window.requestAnimationFrame( function(){t.update();} );
 }

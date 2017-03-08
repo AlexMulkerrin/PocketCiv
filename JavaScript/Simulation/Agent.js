@@ -9,5 +9,12 @@ const stateID = {wander:0, explore:1, settle:2};
 //
 // Constructor takes desired location within the simulation world and owning faction reference
 function Agent(inX, inY, inFaction) {
-
+	this.x = inX;
+	this.y = inY;
+	this.faction = inFaction;
+	
+	this.path = [];
+	this.hasTarget = false;
+	this.state = stateID.explore;
+	this.isAlive = true;
 }
