@@ -15,4 +15,6 @@ function Tile(inTerrainID) {
 	this.desirability = ratingID.poor;
 	this.cityTerritory = NONE;
 	this.islandID = NONE;
+	this.isCoast = false;
+	this.adjacentCoast = [];
 }

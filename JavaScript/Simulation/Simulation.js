@@ -20,7 +20,7 @@ function Simulation(width, height) {
 
 	this.generation = 0;
 
-	this.terrain = new Terrain(width, height);
+	this.terrain = new Terrain(); //new Terrain(width, height);
 }
 // TODO commentary
 Simulation.prototype.update = function() {

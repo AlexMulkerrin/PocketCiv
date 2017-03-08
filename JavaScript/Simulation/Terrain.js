@@ -22,9 +22,10 @@ function Terrain(inWidth, inHeight) {
 	}
 	this.generateLandmass();
 
-
-	this.islandStats = [];
+	this.regionDetails = [];
 	this.identifyIslands();
+	this.identifyCoast();
+	this.setGlobalDesirability();
 }
 // TODO commentary
 Terrain.prototype.generateLandmass = function() {
@@ -54,8 +55,28 @@ Terrain.prototype.generateLandmass = function() {
 		}
 	}
 }
+Terrain.prototype.identifyCoast = function() {
+	var adj = [ [0,-1], [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0], [-1,-1] ];
+	for (var i=0; i<this.width; i++) {
+		for (var j=0; j<this.height; j++) {
+			if (this.tile[i][j].type == terrainID.water) {
+				for (var e=0; e<adj.length; e++) {
+					var nx = i + adj[e][0];
+					var ny = j + adj[e][1];
+					if (this.isInBounds(nx,ny) && this.tile[nx][ny].type == terrainID.grass) {
+						this.tile[i][j].isCoast = true;
+						this.tile[i][j].adjacentCoast[e] = true;
+					} else {
+						this.tile[i][j].adjacentCoast[e] = false;
+					}
+				}
+			}
+		}
+	}
+}
 Terrain.prototype.identifyIslands = function() {
 	var adj = [ [-1,0],[0,-1], [1,0], [0,1] ];
+	var islandStats = [];
 	var currentIslandID = 0;
 	var foundAll = false;
 	var checklist=[], nextCheck=[];
@@ -73,7 +94,7 @@ Terrain.prototype.identifyIslands = function() {
 				&& this.tile[i][j].islandID == NONE) {
 				found = true;
 				checklist = [[i, j]];
-				this.islandStats[currentIslandID] = 0;
+				islandStats[currentIslandID] = 0;
 			}
 			i++;
 			if (i>=this.width) {
@@ -94,7 +115,7 @@ Terrain.prototype.identifyIslands = function() {
 						&& this.tile[nx][ny].type == terrainID.grass
 						&& this.tile[nx][ny].islandID == NONE ){
 						this.tile[nx][ny].islandID = currentIslandID;
-						this.islandStats[currentIslandID]++;
+						islandStats[currentIslandID]++;
 						nextCheck.push( [nx, ny] );
 					}
 				}
@@ -102,7 +123,39 @@ Terrain.prototype.identifyIslands = function() {
 			checklist = nextCheck;
 			nextCheck = [];
 		}
+		if (foundAll == false) {
+			this.regionDetails.push(new RegionDetails(islandStats[currentIslandID]));
+		}
 		currentIslandID++;
+	}
+}
+Terrain.prototype.setGlobalDesirability = function() {
+	var fatCross = [
+		[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],
+		[-1,-1],[1,-1],[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],
+		[-2,-1],[-1,-2],[2,-1],[-1,2]
+	];
+	var nx, ny, total;
+	for (var i=0; i<this.width; i++) {
+		for (var j=0; j<this.height; j++) {
+			if (this.tile[i][j].type == terrainID.grass) {
+				total = 0;
+				for (var e=0; e<fatCross.length; e++) {
+					nx = i + fatCross[e][0];
+					ny = j + fatCross[e][1];
+					if (this.isInBounds(nx,ny)) {
+						if (this.tile[nx][ny].type == terrainID.grass) {
+							total++;
+						}
+					}
+				}
+				if (total == fatCross.length) {
+					this.tile[i][j].desirability = ratingID.perfect;
+				} else if (total > REQUIRED_DESIRABILITY) {
+					this.tile[i][j].desirability = ratingID.good;
+				}
+			}
+		}
 	}
 }
 Terrain.prototype.isInBounds = function(x, y) {
@@ -116,4 +169,16 @@ Terrain.prototype.isWithinBorders = function(x, y) {
 		return true;
 	}
 	return false;
+}
+Terrain.prototype.getValidPosition = function() {
+	var nx=0, ny=0, found=false, tile;
+	while (found==false) {
+			nx = randomInteger(this.width);
+			ny = randomInteger(this.height);
+			tile = this.tile[nx][ny];
+			if (tile.type == terrainID.grass && tile.occupiers.length == 0 && tile.cityPresent == NONE) {
+				found = true;
+			}
+		}
+	return {x:nx, y:ny};
 }

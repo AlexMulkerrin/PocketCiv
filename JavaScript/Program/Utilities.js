@@ -26,6 +26,25 @@ function randomBool() {
 function randomInteger(limit) {
 	return Math.floor(Math.random()*limit);
 }
+// TODO description
+function randomName() {
+	var vowels = ['a','e','i','o','u'];
+	var consonants= ['p','t','k','m','n'];
+	var text="";
+	var wordLength=randomInteger(6)+4;
+	var letterType=randomInteger(2);
+	for (var j=0; j<wordLength; j++) {
+		if (letterType==0) {
+			text +=randomChoice(consonants);
+			letterType++;
+		} else {
+			text +=randomChoice(vowels);
+			letterType=0;
+		}
+		if (j==0) text=text.toUpperCase();
+	}
+	return text;
+}
 // helper function to instantiate a 2D array with default value
 function create2DArray(width, height, initialValue) {
 	result = [];
