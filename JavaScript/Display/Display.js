@@ -47,7 +47,9 @@ Display.prototype.resizeCanvas = function() {
 Display.prototype.refresh = function() {
 	this.clearScreen();
 	this.drawMainMap();
+	this.drawBorders();
 	this.drawFogOfWar();
+	this.drawStructures();
 	this.drawAgents();
 	if (this.targetSim.isDebugMode) this.showDebugInfo();
 }
@@ -56,8 +58,6 @@ Display.prototype.clearScreen = function() {
 	this.ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
 }
 Display.prototype.drawMainMap = function() {
-
-
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	if (this.targetSim.isDebugMode) {
 		map = this.targetSim.terrain;
@@ -93,6 +93,99 @@ Display.prototype.drawMainMap = function() {
 		}
 	}
 }
+Display.prototype.drawStructures = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	var x, y;
+	var city = this.targetSim.city;
+	for (var i=0; i<city.length; i++) {
+		x = city[i].x;
+		y = city[i].y;
+		if (map.tile[x][y].state == visionID.seen) {
+			this.drawTile(x*this.sqSize,y*this.sqSize, 5);
+		}
+	}
+}
+Display.prototype.drawBorders = function() {
+	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	for (var i=0; i<map.width; i++) {
+		for (var j=0; j<map.height; j++) {
+			if (map.tile[i][j].cityTerritory !== NONE) {
+				var cityID = map.tile[i][j].cityTerritory;
+				var adjMatrix = clockwiseAdjMatrix;
+				var adj = []
+				for (var e=0; e<adjMatrix.length; e++) {
+					nx = i + adjMatrix[e][0];
+					ny = j + adjMatrix[e][1];
+					if (map.isInBounds(nx, ny) && map.tile[nx][ny].cityTerritory != cityID) {
+						adj[e]= true;
+					} else {
+						adj[e] = false;
+					}
+				}
+				// check cases to display subtiles
+				var x = i*this.sqSize;
+				var y = j*this.sqSize;
+				// middle edges
+				if (adj[0]) {
+					this.drawBorderEdge(x, y, 0);
+					if (adj[2]) {
+						this.drawBorderCorner(x, y, 0);
+					}
+					if (!adj[2]) {
+						this.drawBorderEdge(x, y, 0, 1);
+					}
+					if (!adj[6]) {
+						this.drawBorderEdge(x, y, 0, 4);
+					}
+				}
+				if (adj[2]) {
+					this.drawBorderEdge(x, y, 1);
+					if (adj[4]) {
+						this.drawBorderCorner(x, y, 1);
+					}
+					if (!adj[0]) {
+						this.drawBorderEdge(x, y, 1, 1);
+					}
+					if (!adj[4]) {
+						this.drawBorderEdge(x, y, 1, 2);
+					}
+				}
+				if (adj[4]) {
+					this.drawBorderEdge(x, y, 2);
+					if (adj[6]) {
+						this.drawBorderCorner(x, y, 2);
+					}
+					if (!adj[2]) {
+						this.drawBorderEdge(x, y, 2, 2);
+					}
+					if (!adj[6]) {
+						this.drawBorderEdge(x, y, 2, 3);
+					}
+				}
+				if (adj[6]) {
+					this.drawBorderEdge(x, y, 3);
+					if (adj[0]) {
+						this.drawBorderCorner(x, y, 3);
+					}
+					if (!adj[4]) {
+						this.drawBorderEdge(x, y, 3, 3);
+					}
+					if (!adj[0]) {
+						this.drawBorderEdge(x, y, 3, 4);
+					}
+				}
+
+				// inner corners
+				if (!adj[0] && adj[1] && !adj[2]) this.drawBorderCorner(x, y, 0, true);
+				if (!adj[2] && adj[3] && !adj[4]) this.drawBorderCorner(x, y, 1, true);
+				if (!adj[4] && adj[5] && !adj[6]) this.drawBorderCorner(x, y, 2, true);
+				if (!adj[6] && adj[7] && !adj[0]) this.drawBorderCorner(x, y, 3, true);
+
+
+			}
+		}
+	}
+}
 Display.prototype.drawAgents = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	var x, y, factionID;
@@ -124,7 +217,7 @@ Display.prototype.drawFogOfWar = function() {
 	this.ctx.fillStyle = interfaceColours.unseen;
 	for (var i=0; i<map.width; i++) {
 		for (var j=0; j<map.height; j++) {
-			if (map.tile[i][j].state == visionID.seen 
+			if (map.tile[i][j].state == visionID.seen
 				|| this.targetSim.isDebugMode) {
 				if (map.tile[i][j].lastSeen >= this.targetSim.generation) {
 					this.drawAdjacentFog(i, j, map);
@@ -191,6 +284,45 @@ Display.prototype.drawCoastTile = function(x, y, tile) {
 		index = tileChoices[choiceIndex];
 		this.drawQuarterTile(x, y, index, e);
 	}
+}
+Display.prototype.drawBorderEdge = function(x, y, edgeID, isCornerEdge) {
+	var edgePos = [[4,0], [12,4], [4,12], [0,4]];
+	var cornerPos = [[12,0], [12,12], [0,12], [0,0]];
+	var edgeDim = [[8,4], [4,8], [8,4], [4,8]];
+	var index = 11;
+	var sx = (index % 4)*17 + edgePos[edgeID][0];
+	var sy = Math.floor(index/4)*17 + edgePos[edgeID][1];
+
+	var qx, qy;
+	var dx, dy;
+	if (isCornerEdge>0) {
+		qx = x + cornerPos[isCornerEdge-1][0];
+		qy = y + cornerPos[isCornerEdge-1][1];
+		dx = 4;
+		dy = 4;
+	} else {
+		qx = x + edgePos[edgeID][0];
+		qy = y + edgePos[edgeID][1];
+		dx = edgeDim[edgeID][0];
+		dy = edgeDim[edgeID][1];
+	}
+	this.ctx.drawImage(this.tileset, sx, sy, dx, dy, qx, qy, dx*this.scale, dy*this.scale);
+}
+Display.prototype.drawBorderCorner = function(x, y, cornerID, isInner) {
+	var cornerPos = [[12,0], [12,12], [0,12], [0,0]];
+	var innerCornerPos = [[4,8], [4,4], [8,4], [8,8]];
+	var index = 11;
+	var sx, sy;
+	if (isInner) {
+		sx = (index % 4)*17 + innerCornerPos[cornerID][0];
+		sy = Math.floor(index/4)*17 + innerCornerPos[cornerID][1];
+	} else {
+		sx = (index % 4)*17 + cornerPos[cornerID][0];
+		sy = Math.floor(index/4)*17 + cornerPos[cornerID][1];
+	}
+	var qx = x + cornerPos[cornerID][0];
+	var qy = y + cornerPos[cornerID][1];
+	this.ctx.drawImage(this.tileset, sx, sy, 4, 4, qx, qy, 4*this.scale, 4*this.scale);
 }
 Display.prototype.drawQuarterTile = function(x, y, index, quarterID) {
 	var quarterPos = [ [8,0], [8,8], [0,8], [0,0] ];

@@ -25,7 +25,7 @@ function Simulation(width, height) {
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(1, 16, 0);
+	this.generateStartingFactions(1, 16, 16);
 }
 // TODO commentary
 Simulation.prototype.update = function() {
@@ -48,16 +48,23 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents,
 			this.agent.push(newAgent);
 			this.showVision(newAgent);
 		}
+		for (var j=0; j<numCities; j++) {
+			var pos = this.terrain.getValidPosition();
+			var newCity = new Structure(j, pos.x, pos.y, newFaction);
+			this.terrain.tile[pos.x][pos.y].cityPresent = newCity;
+			this.foundCity(newCity);
+			this.city.push(newCity);
+			this.showVision(newCity, true);
+		}
 	}
 }
 Simulation.prototype.showVision = function(agent, isStructure) {
 	var x,y,factionVision;
 	var adj = [];
 	if (isStructure) {
-		adj = [[0,0],[-1,0],[0,-1],[1,0],[0,1],[-2,0],[0,-2],[2,0],[0,2],[-1,-1],
-		[1,-1],[1,1],[-1,1],[-2,1],[1,-2],[2,1],[1,2],[-2,-1],[-1,-2],[2,-1],[-1,2]];
+		adj = cityCross;
 	} else {
-		adj =[ [0,0],[-1,0], [1,0], [0,-1], [0,1],[-1,-1], [-1,1], [1,-1], [1,1] ];
+		adj = standardVisionMatrix;
 	}
 	for (var i=0; i<adj.length; i++) {
 		x = agent.x + adj[i][0];
@@ -77,6 +84,19 @@ Simulation.prototype.showVision = function(agent, isStructure) {
 			if (sourceTile.cityTerritory !== NONE) {
 				factionVision.tile[x][y].cityTerritory = sourceTile.cityTerritory.id;
 			}
+		}
+	}
+}
+Simulation.prototype.foundCity = function(city) {
+	var nx, ny;
+	for (var i=0; i<cityCross.length; i++) {
+		nx = city.x + cityCross[i][0];
+		ny = city.y + cityCross[i][1];
+		if (this.terrain.isInBounds(nx, ny)
+			&& this.terrain.tile[nx][ny].cityTerritory == NONE
+			&& this.terrain.tile[nx][ny].type == terrainID.grass) {
+			this.terrain.tile[nx][ny].cityTerritory = city;
+			this.faction[city.faction.id].visionMap.tile[nx][ny].cityTerritory = city.id;
 		}
 	}
 }

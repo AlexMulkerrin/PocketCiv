@@ -2,6 +2,10 @@
 
 // constants for action states of an agent
 const stateID = {wander:0, explore:1, settle:2};
+const standardVisionMatrix = [	[-1,-1],[0,-1],[1,-1],
+								[-1,0], [0,0], [1,0],
+								[-1,1], [0,1], [1,1]
+							 ];
 
 // Class acts as store of all the information pertaining to an individual agent within the simulation
 // Refers to the following modules within its methods:
@@ -12,7 +16,7 @@ function Agent(inX, inY, inFaction) {
 	this.x = inX;
 	this.y = inY;
 	this.faction = inFaction;
-	
+
 	this.path = [];
 	this.hasTarget = false;
 	this.state = stateID.explore;

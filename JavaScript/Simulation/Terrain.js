@@ -1,5 +1,8 @@
 // Terrain sub class, holds information on the world's terrain
 
+const edgeAdjMatrix = [[1,0], [0,1], [-1,0], [0,-1]];
+const clockwiseAdjMatrix = [ [0,-1], [1,-1], [1,0], [1,1], [0,1], [-1,1], [-1,0], [-1,-1] ];
+
 // Class handles the actual terrain data of the simulation
 // Contains:
 // * array of Tile instances
@@ -176,7 +179,10 @@ Terrain.prototype.getValidPosition = function() {
 			nx = randomInteger(this.width);
 			ny = randomInteger(this.height);
 			tile = this.tile[nx][ny];
-			if (tile.type == terrainID.grass && tile.occupiers.length == 0 && tile.cityPresent == NONE) {
+			if (tile.type == terrainID.grass
+				&& tile.occupiers.length == 0
+				&& tile.cityPresent == NONE
+				&& tile.cityTerritory == NONE) {
 				found = true;
 			}
 		}
