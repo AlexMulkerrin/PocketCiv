@@ -60,7 +60,7 @@ Display.prototype.drawMainMap = function() {
 
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	if (this.targetSim.isDebugMode) {
-		//map = this.targetSim.terrain;
+		map = this.targetSim.terrain;
 	}
 	this.ctx.fillStyle = interfaceColours.unseen;
 	this.ctx.fillRect(0,0,map.width*this.sqSize, map.height*this.sqSize);
@@ -110,13 +110,31 @@ Display.prototype.drawAgents = function() {
 Display.prototype.drawFogOfWar = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	// totally unknown
-	for (var i=0; i<map.width; i++) {
-		for (var j=0; j<map.height; j++) {
-			if (map.tile[i][j].state == visionID.seen) {
-				this.drawAdjacentFog(i, j, map);
+	if (this.targetSim.isDebugMode == false) {
+		for (var i=0; i<map.width; i++) {
+			for (var j=0; j<map.height; j++) {
+				if (map.tile[i][j].state == visionID.seen) {
+					this.drawAdjacentFog(i, j, map);
+				}
 			}
 		}
 	}
+	// previously seen
+	this.ctx.globalAlpha=0.5;
+	this.ctx.fillStyle = interfaceColours.unseen;
+	for (var i=0; i<map.width; i++) {
+		for (var j=0; j<map.height; j++) {
+			if (map.tile[i][j].state == visionID.seen 
+				|| this.targetSim.isDebugMode) {
+				if (map.tile[i][j].lastSeen >= this.targetSim.generation) {
+					this.drawAdjacentFog(i, j, map);
+				} else {
+					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
+				}
+			}
+		}
+	}
+	this.ctx.globalAlpha=1;
 }
 Display.prototype.drawAdjacentFog = function(x, y, visionMap) {
 	var adj = [ [0,-1],[0,1], [-1,0], [1,0] ];
