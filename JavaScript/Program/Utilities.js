@@ -31,7 +31,7 @@ function randomName() {
 	var vowels = ['a','e','i','o','u'];
 	var consonants= ['p','t','k','m','n'];
 	var text="";
-	var wordLength=randomInteger(6)+4;
+	var wordLength=randomInteger(5)+3;
 	var letterType=randomInteger(2);
 	for (var j=0; j<wordLength; j++) {
 		if (letterType==0) {

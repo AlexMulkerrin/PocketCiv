@@ -18,4 +18,13 @@ function Faction(inID) {
 		this.paletteID = 6;
 	}
 	this.visionMap = {};
+	
+	this.isAlive = true;
+	this.unitTotal = 0;
+	this.cityTotal = 0;
+	
+	this.areaTotal = 0;
+	this.prodTotal = 0;
+	this.nextBuild = NONE;
+	this.landmassLocation = [];
 }

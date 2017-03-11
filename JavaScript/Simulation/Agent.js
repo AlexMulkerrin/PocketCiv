@@ -22,3 +22,6 @@ function Agent(inX, inY, inFaction) {
 	this.state = stateID.explore;
 	this.isAlive = true;
 }
+Agent.prototype.findUnexplored = function() {
+	// TODO
+}

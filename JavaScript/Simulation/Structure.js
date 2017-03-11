@@ -14,6 +14,7 @@ function Structure(index, inX, inY, inFaction) {
 	this.faction = inFaction;
 	this.stored = 0;
 	this.productionRate = 0;
+	this.timeToBuild = NONE;
 }
 Structure.prototype.getYield = function() {
 	var map = this.faction.visionMap;
@@ -24,7 +25,7 @@ Structure.prototype.getYield = function() {
 		ny = this.y + cityCross[i][1];
 		if (map.isInBounds(nx, ny)) {
 			var currentTile = map.tile[nx][ny];
-			if (currentTile.type = terrainID.grass
+			if (currentTile.type == terrainID.grass
 				&& currentTile.cityTerritory == this.id) {
 				grassTotal++;
 			}

@@ -26,6 +26,7 @@ function Simulation(width, height) {
 	this.agent = [];
 	this.city = [];
 	this.generateStartingFactions(16, 1, 1);
+	this.updateFactionDetails();
 }
 // TODO commentary
 Simulation.prototype.update = function() {
@@ -52,10 +53,58 @@ Simulation.prototype.generateStartingFactions = function(numFactions, numAgents,
 			var pos = this.terrain.getValidPosition();
 			var newCity = new Structure(j, pos.x, pos.y, newFaction);
 			this.terrain.tile[pos.x][pos.y].cityPresent = newCity;
+
 			this.foundCity(newCity);
 			this.city.push(newCity);
 			this.showVision(newCity, true);
+			
 		}
+	}
+}
+Simulation.prototype.updateFactionDetails = function() {;
+	var unitTotal, cityTotal, areaTotal, prodTotal, nextBuild, landmass;
+	for (var i=0; i<this.faction.length; i++) {
+		unitTotal = 0;
+		cityTotal = 0;
+		areaTotal = 0;
+		prodTotal = 0;
+		nextBuild = NONE;
+		landmass = [];
+		for (var j=0; j<this.terrain.regionDetails.length; j++) {
+			landmass[j] = 0;
+		}
+		
+		for (var j=0; j<this.agent.length; j++) {
+			if (this.agent[j].faction.id == i) {
+				unitTotal++;
+			}
+		}
+		for (var j=0; j<this.city.length; j++) {
+			if (this.city[j].faction.id == i) {
+				cityTotal++;
+				var prod = this.city[i].getYield();
+				var timeToBuild = Math.ceil((UNIT_COST-this.city[i].stored)/prod);
+				this.city[j].timeToBuild = timeToBuild;
+				prodTotal += prod;
+				
+				var x = this.city[j].x;
+				var y = this.city[j].y;
+				var landmassID = this.terrain.tile[x][y].islandID;
+				landmass[landmassID] += prod;
+				
+				if (nextBuild == NONE) {
+					nextBuild = timeToBuild;
+				} else if (timeToBuild < nextBuild) {
+					nextBuild = timeToBuild
+				}
+			}
+		}
+		this.faction[i].unitTotal = unitTotal;
+		this.faction[i].cityTotal = cityTotal;
+		this.faction[i].areaTotal = prodTotal; // same as production at the moment...
+		this.faction[i].prodTotal = prodTotal;
+		this.faction[i].nextBuild = nextBuild;
+		this.faction[i].landmassLocation = landmass;
 	}
 }
 Simulation.prototype.showVision = function(agent, isStructure) {
@@ -99,4 +148,7 @@ Simulation.prototype.foundCity = function(city) {
 			this.faction[city.faction.id].visionMap.tile[nx][ny].cityTerritory = city.id;
 		}
 	}
+}
+Simulation.prototype.getDate = function() {
+	return 4000 - this.generation*20;
 }

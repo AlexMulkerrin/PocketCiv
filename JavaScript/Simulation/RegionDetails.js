@@ -19,3 +19,6 @@ function RegionDetails(inSize, inType) {
 	this.centerX = 0;
 	this.centerY = 0;
 }
+RegionDetails.prototype.updateOccupiers = function(faction) {
+	
+}
