@@ -25,7 +25,7 @@ function Simulation(width, height) {
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(1, 16, 16);
+	this.generateStartingFactions(16, 1, 1);
 }
 // TODO commentary
 Simulation.prototype.update = function() {

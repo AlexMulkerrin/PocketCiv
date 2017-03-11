@@ -3,7 +3,7 @@
 // loader function invoked on page load
 function loadProgram() {
 	var program = new Program();
-	window.requestAnimationFrame( function(){program.update();});
+	//window.requestAnimationFrame( function(){program.update();});
 }
 
 // Class containing all modules of Application:

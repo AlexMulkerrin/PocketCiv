@@ -67,3 +67,47 @@ function RGBString(red,green,blue) {
 	colourString+=blue.toString(16);
 	return colourString;
 }
+// helper function to convert html colour string into 8bit rgb components
+function colourComponents(colour) {
+	var component=[], string;
+	for (var i=0; i<3; i++) {
+		// "#rrggbb"
+		string = colour[1+i*2]+colour[2+i*2];
+		component[i]=parseInt(string,16);
+	}
+	return {r:component[0], g:component[1], b:component[2]};
+}
+// helper function to calculate hue, saturation and luminosity from 8bit rgb components
+function RGBtoHSL(red, green, blue) {
+	var hue, sat, lum;
+	red /= 255 , green /= 255, blue /= 255;
+	var max = Math.max(red, green, blue);
+	var min = Math.min(red, green, blue);
+	lum = (max + min) / 2;
+	
+	if (max == min) { // monochrome
+		hue = 0;
+		sat = 0;
+	} else {
+		var delta = max - min;
+		if (lum > 0.5) {
+			sat = delta / (2 - (max + min));
+		} else {
+			sat = delta / (max + min);
+		}
+		switch (max) {
+			case red:
+				hue = (green - blue) / delta;
+				if (green < blue) hue += 6;	
+				break;
+			case green:
+				hue = ((blue - red) / delta) + 2;
+				break;
+			case blue:
+				hue = ((red - green) / delta) + 4;
+				break
+		}
+		 hue /= 6;
+	}
+	return {"hue":hue, "sat":sat, "lum":lum};
+}
