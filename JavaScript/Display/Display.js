@@ -240,7 +240,7 @@ Display.prototype.drawFogOfWar = function() {
 			if (map.tile[i][j].state == visionID.seen
 				|| this.targetSim.isDebugMode) {
 				if (map.tile[i][j].lastSeen >= this.targetSim.generation) {
-					this.drawAdjacentFog(i, j, map);
+					this.drawAdjacentFog(i, j, map, true);
 				} else {
 					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
 				}
@@ -249,16 +249,19 @@ Display.prototype.drawFogOfWar = function() {
 	}
 	this.ctx.globalAlpha=1;
 }
-Display.prototype.drawAdjacentFog = function(x, y, visionMap) {
+Display.prototype.drawAdjacentFog = function(x, y, visionMap, isFogofWar) {
 	var adj = [ [0,-1],[0,1], [-1,0], [1,0] ];
 	for (var e=0; e<adj.length; e++) {
 		var nx = x + adj[e][0];
 		var ny = y + adj[e][1];
-		if (visionMap.isInBounds(nx,ny) && visionMap.tile[nx][ny].state == visionID.unseen){
-			if (e>1) {
-				this.drawHalfTile(x*this.sqSize,y*this.sqSize, 15, e);
-			} else {
-				this.drawHalfTile(x*this.sqSize,y*this.sqSize, 14, e);
+		if (visionMap.isInBounds(nx,ny) ) {
+			 if (visionMap.tile[nx][ny].state == visionID.unseen
+			 	|| (visionMap.tile[nx][ny].lastSeen < this.targetSim.generation && isFogofWar) ) {
+				if (e>1) {
+					this.drawHalfTile(x*this.sqSize,y*this.sqSize, 15, e);
+				} else {
+					this.drawHalfTile(x*this.sqSize,y*this.sqSize, 14, e);
+				}
 			}
 		}
 	}
