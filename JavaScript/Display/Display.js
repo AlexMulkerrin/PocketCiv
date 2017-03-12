@@ -214,7 +214,8 @@ Display.prototype.drawAgents = function() {
 			x = agent[i].x;
 			y = agent[i].y;
 			paletteID = agent[i].faction.paletteID;
-			if (map.tile[x][y].state == visionID.seen || this.targetSim.isDebugMode) {
+			if ((map.tile[x][y].state == visionID.seen && map.tile[x][y].lastSeen >= this.targetSim.generation)
+				|| this.targetSim.isDebugMode) {
 				this.drawSprite(x*this.sqSize,y*this.sqSize, 0, paletteID);
 			}
 		}
@@ -288,27 +289,29 @@ Display.prototype.drawCityDetails = function() {
 	this.ctx.font = "bold "+this.fontSize+"px Arial";
 }
 Display.prototype.drawUserInterface = function() {
+	var playerID = this.targetSim.playerFaction;
 	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
 	this.ctx.fillStyle = interfaceColours.text;
 	// TODO
 	// display game details
 	//num cities, num armies
-	var output = "Cities: " + this.targetSim.faction[0].cityTotal;
-	output += "\t Units: " + this.targetSim.faction[0].unitTotal;
+	var output = "Cities: " + this.targetSim.faction[playerID].cityTotal;
+	output += "\t Units: " + this.targetSim.faction[playerID].unitTotal;
 	this.ctx.fillText(output, offsetX, this.fontSize);
 	//turn num, date
 	var output = "Turn: "+this.targetSim.generation;
-	output += "\t  " + this.targetSim.getDate() + " BC";
+	output += "\t  " + this.targetSim.getDate();
 	this.ctx.fillText(output, offsetX, this.fontSize*2);
 	//owned territory, total production (next construction)
-	output = "Area: " + this.targetSim.faction[0].areaTotal;
-	output += "\t Prod: " + this.targetSim.faction[0].prodTotal;
-	output += " (" + this.targetSim.faction[0].nextBuild + " turns)";
+	output = "Area: " + this.targetSim.faction[playerID].areaTotal;
+	output += "\t Prod: " + this.targetSim.faction[playerID].prodTotal;
+	output += " (" + this.targetSim.faction[playerID].nextBuild + " turns)";
 	this.ctx.fillText(output, offsetX, this.fontSize*3);
 
 	// Island details
-	var percent;
-	landmass = this.targetSim.faction[0].landmassLocation;
+	var percent = 0;
+	landmass = this.targetSim.faction[playerID].landmassLocation;
+	output = "Unknown lands";
 	for (var i=0; i<landmass.length; i++) {
 		if (landmass[i]>0) {
 			output = this.targetSim.terrain.regionDetails[i].name;
@@ -326,6 +329,17 @@ Display.prototype.drawUserInterface = function() {
 	// movement left, terrain type
 	// city territory?
 	// settlement suitability
+	if (this.targetSim.agent[0]) {
+		this.showSelectionInfo();
+	}
+
+	// buttons: wait and settle
+	this.ctx.fillText("Move with wasd/arrow keys", offsetX, this.fontSize*16);
+	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*17);
+}
+Display.prototype.showSelectionInfo = function() {
+	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
+
 	output = this.targetSim.faction[0].name + " Warrior";
 	this.ctx.fillText(output, offsetX, this.fontSize*8);
 	this.ctx.fillText("Moves: 1/1", offsetX, this.fontSize*9);
@@ -368,9 +382,6 @@ Display.prototype.drawUserInterface = function() {
 			this.ctx.fillStyle = interfaceColours.text;
 		}
 	}
-	// buttons: wait and settle
-	this.ctx.fillText("Move with wasd/arrow keys", offsetX, this.fontSize*16);
-	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*17);
 }
 Display.prototype.showDebugInfo = function() {
 	var offsetX = this.targetSim.terrain.width*this.sqSize+5;

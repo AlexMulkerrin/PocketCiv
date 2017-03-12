@@ -24,14 +24,16 @@ function Simulation(width, height) {
 	this.currentFactionDone = false;
 	this.currentAgent = 0;
 
-	this.playerFaction = 0;
-
 	this.terrain = new Terrain(); //new Terrain(width, height);
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(8, 1, 1);
+	this.generateStartingFactions(16, 1, 0);
 	this.updateFactionDetails();
+
+	this.currentPlayerInput = [];
+	this.playerFaction = randomInteger(this.faction.length);
+	//this.faction[this.playerFaction].isPlayerControlled = true;
 }
 // TODO commentary
 // main update cycle
@@ -46,6 +48,9 @@ Simulation.prototype.update = function() {
 				this.generation++;
 				this.updateFactionDetails();
 				this.currentFaction = 0;
+				if (this.generation == 500) {
+					this.isRunning = false;
+				}
 			}
 		}
 	}
@@ -117,7 +122,27 @@ Simulation.prototype.progressComputerAgent = function() {
 	var agent = this.agent[this.currentAgent];
 	this.showVision(agent);
 	if (agent.isAlive) {
-		this.randomWalk(agent);
+		// settle
+		this.checkSettling(agent);
+		// or wander...
+		if (agent.isAlive) {
+			switch (agent.state) {
+				case stateID.wander:
+					this.randomWalk(agent);
+					break;
+				case stateID.explore:
+					if (agent.path.length == 0) {
+						agent.hasTarget = agent.findUnexplored();
+						if (agent.hasTarget == false) {
+							agent.state = stateID.wander;
+						}
+					}
+					if (agent.path.length>0) {
+						this.progressPath(agent);
+					}
+					break;
+			}
+		}
 	}
 	// get new vision and check for settling
 	if (agent.isAlive) {
@@ -127,16 +152,114 @@ Simulation.prototype.progressComputerAgent = function() {
 	this.currentAgent++;
 }
 // agent movement and fights
+Simulation.prototype.progressPath = function(agent) {
+	var newMove = agent.path[agent.path.length-1];
+	this.tryMovement(agent, newMove[0], newMove[1]);
+	if (result == true) {
+		agent.path.length = agent.path.length-1;
+	} else {
+		agent.path = [];
+	}
+}
+Simulation.prototype.tryMovement = function(agent, dx, dy) {
+	var nx = agent.x + dx;
+	var ny = agent.y + dy;
+	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
+		this.resolveAgentOccupations(agent, nx, ny);
+		agent.x = nx;
+		agent.y = ny;
+		return true;
+
+	} else {
+		return false
+	}
+}
 Simulation.prototype.randomWalk = function(agent) {
 	var adj = [[0,1],[0,-1],[1,0],[-1,0]];
 	var choice = randomInteger(4);
 	var nx = agent.x + adj[choice][0];
 	var ny = agent.y + adj[choice][1];
-	if (this.terrain.isInBounds(nx,ny) && this.terrain.tile[nx][ny].type == terrainID.grass) {
-		//this.resolveAgentOccupations(agent, nx, ny);
+	if (this.terrain.isInBounds(nx,ny)
+		&& this.terrain.tile[nx][ny].type == terrainID.grass) {
+		this.resolveAgentOccupations(agent, nx, ny);
 		agent.x = nx;
 		agent.y = ny;
 	}
+}
+Simulation.prototype.resolveAgentOccupations = function(agent, nx, ny) {
+	var start = this.terrain.tile[agent.x][agent.y];
+	// remove agent objref from start tile occupiers list
+	start.occupiers = start.occupiers.filter(function(a){return (a !== agent)});
+
+	var dest =  this.terrain.tile[nx][ny];
+	if (dest.occupiers.length>0) {
+		var topAgent = dest.occupiers[0];
+
+		if (topAgent.faction !== agent.faction) { // fight!
+			var combatResult = this.resolveCombat(agent, topAgent);
+			if (combatResult == true) {
+				// destroy defending stack
+				for (var i=0; i<dest.occupiers.length; i++) {
+					dest.occupiers[i].isAlive = false;
+				}
+				dest.occupiers = [];
+				dest.occupiers.push(agent);
+				// flip city too!
+				if (dest.cityPresent !== NONE) {
+					//this.recordSeen(dest.cityPresent, true);
+					dest.cityPresent.faction = agent.faction;
+				}
+			}
+		} else { // occupying same square as fellow faction agents
+			dest.occupiers.push(agent);
+		}
+	} else { // check empty tile for city
+		if (	dest.cityPresent !== NONE
+				&& dest.cityPresent.faction != agent.faction) { // fight city
+			var dummyAgent = {};
+			var combatResult = this.resolveCombat(agent, dummyAgent);
+			if (combatResult == true) {
+				//this.recordSeen(dest.cityPresent, true);
+				dest.cityPresent.faction = agent.faction;
+				dest.occupiers.push(agent);
+			}
+		} else {
+			dest.occupiers.push(agent);
+		}
+	}
+}
+Simulation.prototype.resolveCombat = function(attacker, defender) {
+	var attackerWon = randomBool();
+	if (attackerWon) {
+		defender.isAlive = false;
+		if (defender.faction) { //sometimes null in case of empty city
+			//this.recordSeen(defender); //hope this works!
+		}
+		return true;
+	} else {
+		attacker.isAlive = false;
+		return false;
+	}
+}
+Simulation.prototype.checkSettling = function(agent) {
+	var desireResult = agent.faction.visionMap.checkDesirability(agent.x, agent.y)
+	if (desireResult.grass > REQUIRED_DESIRABILITY) {
+
+		var cityTile = this.terrain.tile[agent.x][agent.y];
+		// remove agent obj ref from start tile occupiers list
+		cityTile.occupiers = cityTile.occupiers.filter(function(a){return (a !== agent)});
+		var index = this.city.length;
+
+		var newCity = new Structure(index, agent.x, agent.y, agent.faction);
+		this.terrain.tile[agent.x][agent.y].cityPresent = newCity;
+		this.foundCity(newCity);
+		this.city.push(newCity);
+
+		// now settled the agent no longer exists.
+		agent.isAlive = false;
+		return true;
+	}
+	return false;
 }
 // general functions
 Simulation.prototype.generateStartingFactions = function(numFactions, numAgents, numCities) {
@@ -263,5 +386,13 @@ Simulation.prototype.foundCity = function(city) {
 	}
 }
 Simulation.prototype.getDate = function() {
-	return 4000 - this.generation*20;
+	if (this.generation<200) {
+		return (4000 - this.generation*20) + " BC";
+	} else if (this.generation<300){
+		return (this.generation-200)*10 + " CE";
+	}  else if (this.generation<500){
+		return (this.generation-300)*5+1000 + " CE";
+	} else {
+		return (this.generation-500) + 2000 + " CE";
+	}
 }

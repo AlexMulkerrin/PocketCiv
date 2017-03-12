@@ -30,7 +30,19 @@ VisionMap.prototype.isInBounds = function(x, y) {
 	return false;
 }
 VisionMap.prototype.isUnexplored = function(cx, cy) {
-	//TODO
+	var x,y;
+	var adj = [ [0,0],
+		[-1,0], [1,0], [0,-1], [0,1],
+		[-1,-1], [-1,1], [1,-1], [1,1]
+	];
+	for (var i=0; i<adj.length; i++) {
+		x = cx + adj[i][0];
+		y = cy + adj[i][1];
+		if (this.isInBounds(x,y) && this.tile[x][y].state == visionID.unseen) {
+			return true;
+		}
+	}
+	return false;
 }
 VisionMap.prototype.checkDesirability = function(x, y) {
 	if (this.tile[x][y].cityTerritory !== NONE) {
