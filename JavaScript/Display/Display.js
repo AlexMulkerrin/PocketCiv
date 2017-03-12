@@ -14,6 +14,9 @@ const interfaceColours = {
 // Constructor takes Simulation module to reference it on refreshes
 function Display(inSimulation) {
 	this.targetSim = inSimulation;
+	this.frame = 0;
+	this.lastSimGen = 0;
+
 	this.sqSize = 16;
 	this.fontSize = 16;
 	this.scale = 1;
@@ -57,6 +60,7 @@ Display.prototype.resizeCanvas = function() {
 	}
 }
 Display.prototype.refresh = function() {
+	if (this.lastSimGen !== this.targetSim.generation) this.frame = 0;
 	this.clearScreen();
 	this.drawMainMap();
 	this.drawBorders();
@@ -67,6 +71,8 @@ Display.prototype.refresh = function() {
 	this.drawCurrentAgentHighlight();
 	this.drawUserInterface();
 	if (this.targetSim.isDebugMode) this.showDebugInfo();
+	this.frame++;
+	this.lastSimGen = this.targetSim.generation;
 }
 Display.prototype.clearScreen = function() {
 	this.ctx.fillStyle = interfaceColours.background;
@@ -295,7 +301,8 @@ Display.prototype.drawCurrentAgentHighlight = function() {
 		var agent = this.targetSim.agent[this.targetSim.currentAgent];
 		if (agent.faction.id == sim.playerFaction) {
 			var sqSize = this.sqSize;
-			this.ctx.fillStyle = "#00ff00";
+			this.ctx.fillStyle = interfaceColours.text;
+			if (this.frame % 40 < 20) this.ctx.fillStyle = "#00ff00";
 			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, 1, sqSize);
 			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, sqSize, 1);
 			this.ctx.fillRect(agent.x*sqSize+sqSize-1, agent.y*sqSize, 1, sqSize);
