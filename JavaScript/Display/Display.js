@@ -21,7 +21,7 @@ function Display(inSimulation) {
 
 	this.spriteSheet = {};
 	this.tileset = new Image();
-	//this.tileset.crossOrigin = "Anonymous";
+	this.tileset.crossOrigin = "Anonymous";
 	// location relative to where index.html is, not the script file...
 	this.tileset.src = "Resources/Images/Tileset0.png";
 	var t = this;
