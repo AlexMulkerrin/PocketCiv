@@ -28,12 +28,12 @@ function Simulation(width, height) {
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(16, 1, 0);
+	this.generateStartingFactions(8, 1, 0);
 	this.updateFactionDetails();
 
 	this.currentPlayerInput = [];
 	this.playerFaction = randomInteger(this.faction.length);
-	//this.faction[this.playerFaction].isPlayerControlled = true;
+	this.faction[this.playerFaction].isPlayerControlled = true;
 }
 // TODO commentary
 // main update cycle
@@ -67,22 +67,22 @@ Simulation.prototype.progressFactionTurn = function() {
 		this.turnStart = false;
 	}
 	// AI factions don't wait for user input!
-	if (this.faction[this.currentFaction].isPlayerControlled == false) {
+	if (this.faction[this.currentFaction].isPlayerControlled == true) {
+		this.currentAgent = this.getNextFactionAgent(this.currentFaction);
+		if (this.currentAgent < this.agent.length) { // valid agent?
+			this.checkPlayerInput();
+		} else {
+			this.endFactionTurn();
+		}
+	} else {
 		while (this.currentFactionDone == false) {
-			// get next agent of faction
-			while (	this.currentAgent < this.agent.length
-					&& this.agent[this.currentAgent].faction.id !== this.currentFaction ) {
-				this.currentAgent++;
-			}
-			// if valid agent resolve movement
-			if (this.currentAgent < this.agent.length) {
+			this.currentAgent = this.getNextFactionAgent(this.currentFaction);
+			if (this.currentAgent < this.agent.length) { // valid agent?
 				this.progressComputerAgent();
 			} else {
 				this.endFactionTurn();
 			}
 		}
-	} else {
-		this.endFactionTurn();
 	}
 }
 Simulation.prototype.updateFactionCities = function() {
@@ -118,6 +118,36 @@ Simulation.prototype.endFactionTurn = function() {
 	}
 	this.currentFactionDone = true;
 }
+Simulation.prototype.checkPlayerInput = function() {
+	var hasMoved = false;
+	var agent = this.agent[this.currentAgent];
+
+		if (agent.isAlive) {
+			// check to see if player has given command
+			if (this.currentPlayerInput.length > 0) {
+				switch (this.currentPlayerInput[0]) {
+					case commandID.move:
+						var dx = this.currentPlayerInput[1];
+						var dy = this.currentPlayerInput[2];
+						hasMoved = this.tryMovement(agent, dx, dy);
+						break;
+					case commandID.settle:
+						hasMoved = this.checkSettling(agent, true);
+						break;
+				}
+			}
+		} else {
+			hasMoved = true;
+		}
+		if (hasMoved) {
+			 this.currentPlayerInput = [];
+			if (agent.isAlive) {
+				this.showVision(agent);
+			}
+			this.currentAgent++;
+		}
+}
+
 Simulation.prototype.progressComputerAgent = function() {
 	var agent = this.agent[this.currentAgent];
 	this.showVision(agent);
@@ -150,6 +180,14 @@ Simulation.prototype.progressComputerAgent = function() {
 		//this.checkSettling(agent);
 	}
 	this.currentAgent++;
+}
+Simulation.prototype.getNextFactionAgent = function(faction) {
+	var nextAgent = this.currentAgent;
+	while (	nextAgent < this.agent.length
+			&& this.agent[nextAgent].faction.id !== faction ) {
+		nextAgent++;
+	}
+	return nextAgent;
 }
 // agent movement and fights
 Simulation.prototype.progressPath = function(agent) {
@@ -241,9 +279,10 @@ Simulation.prototype.resolveCombat = function(attacker, defender) {
 		return false;
 	}
 }
-Simulation.prototype.checkSettling = function(agent) {
+Simulation.prototype.checkSettling = function(agent, isForced) {
 	var desireResult = agent.faction.visionMap.checkDesirability(agent.x, agent.y)
-	if (desireResult.grass > REQUIRED_DESIRABILITY) {
+	if (desireResult.grass > REQUIRED_DESIRABILITY
+		|| (isForced && desireResult.valid)) {
 
 		var cityTile = this.terrain.tile[agent.x][agent.y];
 		// remove agent obj ref from start tile occupiers list
@@ -254,6 +293,8 @@ Simulation.prototype.checkSettling = function(agent) {
 		this.terrain.tile[agent.x][agent.y].cityPresent = newCity;
 		this.foundCity(newCity);
 		this.city.push(newCity);
+		this.showVision(newCity, true);
+		//newCity.productionRate = newCity.getYield(); doesn't work?
 
 		// now settled the agent no longer exists.
 		agent.isAlive = false;

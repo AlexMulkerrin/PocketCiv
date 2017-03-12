@@ -64,6 +64,7 @@ Display.prototype.refresh = function() {
 	this.drawStructures();
 	this.drawAgents();
 	this.drawCityDetails();
+	this.drawCurrentAgentHighlight();
 	this.drawUserInterface();
 	if (this.targetSim.isDebugMode) this.showDebugInfo();
 }
@@ -288,35 +289,50 @@ Display.prototype.drawCityDetails = function() {
 	}
 	this.ctx.font = "bold "+this.fontSize+"px Arial";
 }
+Display.prototype.drawCurrentAgentHighlight = function() {
+	var sim = this.targetSim;
+	if (sim.faction[sim.currentFaction].isPlayerControlled && sim.currentAgent<sim.agent.length) {
+		var agent = this.targetSim.agent[this.targetSim.currentAgent];
+		if (agent.faction.id == sim.playerFaction) {
+			var sqSize = this.sqSize;
+			this.ctx.fillStyle = "#00ff00";
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, 1, sqSize);
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, sqSize, 1);
+			this.ctx.fillRect(agent.x*sqSize+sqSize-1, agent.y*sqSize, 1, sqSize);
+			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize+sqSize-1, sqSize, 1);
+		}
+	}
+}
 Display.prototype.drawUserInterface = function() {
-	var playerID = this.targetSim.playerFaction;
-	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
+	var sim = this.targetSim;
+	var playerID = sim.playerFaction;
+	var offsetX = sim.terrain.width*this.sqSize+5;
 	this.ctx.fillStyle = interfaceColours.text;
 	// TODO
 	// display game details
 	//num cities, num armies
-	var output = "Cities: " + this.targetSim.faction[playerID].cityTotal;
-	output += "\t Units: " + this.targetSim.faction[playerID].unitTotal;
+	var output = "Cities: " + sim.faction[playerID].cityTotal;
+	output += "\t Units: " + sim.faction[playerID].unitTotal;
 	this.ctx.fillText(output, offsetX, this.fontSize);
 	//turn num, date
-	var output = "Turn: "+this.targetSim.generation;
-	output += "\t  " + this.targetSim.getDate();
+	var output = "Turn: "+sim.generation;
+	output += "\t  " + sim.getDate();
 	this.ctx.fillText(output, offsetX, this.fontSize*2);
 	//owned territory, total production (next construction)
-	output = "Area: " + this.targetSim.faction[playerID].areaTotal;
-	output += "\t Prod: " + this.targetSim.faction[playerID].prodTotal;
-	output += " (" + this.targetSim.faction[playerID].nextBuild + " turns)";
+	output = "Area: " + sim.faction[playerID].areaTotal;
+	output += "\t Prod: " + sim.faction[playerID].prodTotal;
+	output += " (" + sim.faction[playerID].nextBuild + " turns)";
 	this.ctx.fillText(output, offsetX, this.fontSize*3);
 
 	// Island details
 	var percent = 0;
-	landmass = this.targetSim.faction[playerID].landmassLocation;
+	landmass = sim.faction[playerID].landmassLocation;
 	output = "Unknown lands";
 	for (var i=0; i<landmass.length; i++) {
 		if (landmass[i]>0) {
-			output = this.targetSim.terrain.regionDetails[i].name;
-			output += " " + this.targetSim.terrain.regionDetails[i].sizeClass + "\n";
-			percent = Math.floor(100*landmass[i]/this.targetSim.terrain.regionDetails[i].size);
+			output = sim.terrain.regionDetails[i].name;
+			output += " " + sim.terrain.regionDetails[i].sizeClass + "\n";
+			percent = Math.floor(100*landmass[i]/sim.terrain.regionDetails[i].size);
 		}
 	}
 	this.ctx.fillText(output, offsetX, this.fontSize*5);
@@ -329,7 +345,9 @@ Display.prototype.drawUserInterface = function() {
 	// movement left, terrain type
 	// city territory?
 	// settlement suitability
-	if (this.targetSim.agent[0]) {
+	if (sim.faction[sim.currentFaction].isPlayerControlled
+		&& sim.currentAgent<sim.agent.length
+		&& sim.agent[sim.currentAgent].faction.id == sim.playerFaction ) {
 		this.showSelectionInfo();
 	}
 
@@ -338,13 +356,14 @@ Display.prototype.drawUserInterface = function() {
 	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*17);
 }
 Display.prototype.showSelectionInfo = function() {
+	var agent = this.targetSim.agent[this.targetSim.currentAgent];
 	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
 
-	output = this.targetSim.faction[0].name + " Warrior";
+	output = agent.faction.name + " Warrior";
 	this.ctx.fillText(output, offsetX, this.fontSize*8);
 	this.ctx.fillText("Moves: 1/1", offsetX, this.fontSize*9);
-	var x = this.targetSim.agent[0].x;
-	var y = this.targetSim.agent[0].y;
+	var x = agent.x;
+	var y = agent.y;
 	var terrain = this.targetSim.terrain.tile[x][y].desirability;
 	switch (terrain) {
 		case ratingID.poor:
@@ -361,7 +380,7 @@ Display.prototype.showSelectionInfo = function() {
 	}
 	this.ctx.fillText(output + " ("+x+", "+y+") ", offsetX, this.fontSize*10);
 	// settlement rating
-	var rating = this.targetSim.agent[0].faction.visionMap.checkDesirability(x, y);
+	var rating = agent.faction.visionMap.checkDesirability(x, y);
 	if (rating.valid == false) {
 		this.ctx.fillText("Invalid city location", offsetX, this.fontSize*12);
 	} else {

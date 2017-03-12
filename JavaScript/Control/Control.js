@@ -18,35 +18,35 @@ Control.prototype.createKeyboardEventHandlers = function() {
 		switch (keyCode) {
 			case 65:
 			case 37: // 'a' or left arrow
-				console.log("TODO command: move left");
-				t.sendMove(0, -1);
+			//	console.log("TODO command: move left");
+				t.sendMove(-1, 0);
 				break;
 
 			case 87:
 			case 38: // 'w' or up arrow
-				console.log("TODO command: move up");
-				t.sendMove(-1, 0);
+			//	console.log("TODO command: move up");
+				t.sendMove(0, -1);
 				break;
 
 			case 68:
 			case 39: // 'd' or right arrow
-				console.log("TODO command: move right");
-				t.sendMove(0, 1);
+			//	console.log("TODO command: move right");
+				t.sendMove(1, 0);
 				break;
 
 			case 83:
 			case 40: // 's' or down arrow
-				console.log("TODO command: move down");
-				t.sendMove(1, 0);
+			//	console.log("TODO command: move down");
+				t.sendMove(0, 1);
 				break;
 
 			case 66: // 'b' key
-				console.log("TODO command: build city");
+			//	console.log("TODO command: build city");
 				t.sendSettle();
 				break;
 
 			case 32: // spacebar
-				console.log("TODO command: wait");
+			//	console.log("TODO command: wait");
 				t.sendSkip();
 				break;
 
@@ -55,7 +55,7 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				break;
 
 			case 82: // 'r' key
-				console.log("TODO command: reset sim");
+			//	console.log("TODO command: reset sim");
 				t.resetSim();
 				break;
 
@@ -64,12 +64,12 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				break;
 
 			case 67: // 'c' key
-				console.log("TODO command: toggle debug mode");
+			//	console.log("TODO command: toggle debug mode");
 				t.toggleDebugMode();
 				break;
 
 			case 27: // escape key
-				console.log("TODO command: retire");
+			//	console.log("TODO command: retire");
 				t.retire();
 				break;
 
