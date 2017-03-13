@@ -59,8 +59,9 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				t.resetSim();
 				break;
 
-			case 999: // 'p' key
+			case 80: // 'p' key
 				console.log("TODO command: toggle auto-end turn");
+				t.toggleAutoEndTurn();
 				break;
 
 			case 67: // 'c' key
@@ -92,6 +93,9 @@ Control.prototype.toggleDebugMode = function() {
 }
 Control.prototype.resetSim = function() {
 	this.targetProgram.createNewProgram();
+}
+Control.prototype.toggleAutoEndTurn = function() {
+	this.targetProgram.simulation.isRunning = !this.targetProgram.simulation.isRunning;
 }
 Control.prototype.retire = function() {
 	var sim = this.targetProgram.simulation;

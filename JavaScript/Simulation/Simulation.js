@@ -28,7 +28,7 @@ function Simulation(width, height) {
 	this.faction = [];
 	this.agent = [];
 	this.city = [];
-	this.generateStartingFactions(8, 1, 0);
+	this.generateStartingFactions(16, 1, 0);
 	this.updateFactionDetails();
 
 	this.currentPlayerInput = [];
