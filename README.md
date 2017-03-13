@@ -25,8 +25,8 @@ https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/9a50b18d/index.html
 * 'R' key to reset game with a new civilisation and world map
 
 ## Example Screenshot
-![What your empire will hopefully look like](https://github.com/AlexMulkerrin/PocketCiv/blob/master/Screenshots/turn%20100%20auspicious%20start.png)
-A healthy empire of 4 cities on turn 100. Another faction has been encountered in the east!
+![What your empire will hopefully look like](https://github.com/AlexMulkerrin/PocketCiv/blob/master/Screenshots/example%20100%20turns.png)
+Turn 100 and the **Utatap** tribe have conquered almost half of the **Memono** sub-continent.
 
 
 ## [DRAFT] Project repository layout:
