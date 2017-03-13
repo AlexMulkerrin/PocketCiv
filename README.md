@@ -14,64 +14,73 @@ https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80
 
 ## Link to in Development Version (0.0.9ish?)
 This *might* be crawling with bugs or totally unusable, you have been warned!
-https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/9a50b18d/index.html
+https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/04888c9b/index.html
 
 ## Controls
 * wasd/arrow keys to move selected unit
 * spacebar to skip turn
-* 'B' to settle city *note* area around the unit must be explored to 2 tiles distance and there must be >14 land tiles (look for tiles with green or dark green terrain)
+* '**B**' to settle city *note* sidebar will track the quality rating of the terrain tile the selected unit is currently on. When the tile is suitable there is a green prompt :)
 
 * Escape key to abdicate, leaving an AI leader in charge of your empire
-* 'R' key to reset game with a new civilisation and world map
+* '**R**' key to reset game with a new civilisation and world map
+* '**C**' key to ??? (debug/cheats)
+* '**P**' key to toggle pause (good for AI only games or when turn limit is reached)
 
 ## Example Screenshot
 ![What your empire will hopefully look like](https://github.com/AlexMulkerrin/PocketCiv/blob/master/Screenshots/example%20100%20turns.png)
 Turn 100 and the **Utatap** tribe have conquered almost half of the **Memono** sub-continent.
 
 
-## [DRAFT] Project repository layout:
-Currently in prototype phase (all in one file right now :P ) so this layout hasn't been implemented yet. Pretty clear idea how I'm going to organise the source code though
+## Project repository layout
+Still working on this, not all files/directories present at the moment...
 
 ## /JavaScript/ subdirectories
 *	Program/
- - main entrypoint
- - file handling
- - image loader
- - music loader
- - utilities
+ - Program.js main entrypoint
+ - Utilities.js used throughout codebase
+ - file handling TODO
+ - image loader TODO
+ - music loader TODO
  
 *	Simulation/
- - terrain
- - terrain generator
- - faction
- - unit
- - pathfinder
+ - Simulation.js overarching simulation logic
+ - Terrain.js handles terrain generation too
+ - Tile.js individual terrain tile
+ - RegionDetails.js information on landmasses
+ - Faction.js has ownership of faction agents and structure
+ - VisionMap.js per faction knowledge of the world
+ - Agent.js mobile unit in the world
+ - Structure.js static unit in the world
  
 * Display/
- - renderer
- - minimap
- - interface
+ - Display.js main module for output to screen
+ - SpriteSheet.js generates unit sprites from faction colours
+ - renderer TODO
+ - minimap TODO
+ - interface  TODO
 
 * Controls/
- - mouse
- - keyboard
+ - Control.js handles player input to program
+ - mouse TODO
+ - keyboard TODO
 
-* Audio/
- - sound engine
- - music player
+* Audio/ **TODO**
+ - sound engine 
+ - music player 
 
 ## Other directories
 * /Resources/
- - images
- - sounds
- - music	
+ - Images holds tilesets in various levels of completion
+ - sounds TODO
+ - music	TODO
 
-*	/Ruleset/
+*	/Ruleset/ **TODO**
  - unit types
  - scenarios
  - fixed maps
 
 *	/Screenshots/
+ - Whole lotta screenshots of development progress, put in directories per version?
 
 ## Top level files
 * README.md
