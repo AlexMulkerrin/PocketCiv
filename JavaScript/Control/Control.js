@@ -58,9 +58,14 @@ Control.prototype.createKeyboardEventHandlers = function() {
 			//	console.log("TODO command: reset sim");
 				t.resetSim();
 				break;
+				
+			case 79: // 'o' key
+				console.log("TODO command: switch tileset");
+				t.switchTileset();
+				break;
 
 			case 80: // 'p' key
-				console.log("TODO command: toggle auto-end turn");
+			//	console.log("TODO command: toggle auto-end turn");
 				t.toggleAutoEndTurn();
 				break;
 
@@ -91,6 +96,10 @@ Control.prototype.sendSkip = function() {
 Control.prototype.toggleDebugMode = function() {
 	this.targetProgram.toggleDebugMode();
 }
+Control.prototype.switchTileset = function() {
+	this.targetProgram.display.switchTileset();
+}
+
 Control.prototype.resetSim = function() {
 	this.targetProgram.createNewProgram();
 }

@@ -6,6 +6,8 @@ const interfaceColours = {
 	water:"#5897B7", unseen:"#000000", highlight:"#00ff00"
 };
 
+const tilesetNames = ["Tileset0", "Tileset1"]
+
 // Class handles all rendering operations to screen
 // Takes information from the following modules to display:
 //	* Simulation
@@ -23,10 +25,11 @@ function Display(inSimulation) {
 	this.sidebarWidth = 160;
 
 	this.spriteSheet = {};
+	this.tilesetID = 0;
 	this.tileset = new Image();
 	this.tileset.crossOrigin = "Anonymous";
 	// location relative to where index.html is, not the script file...
-	this.tileset.src = "Resources/Images/Tileset0.png";
+	this.tileset.src = "Resources/Images/"+tilesetNames[this.tilesetID]+".png";
 	var t = this;
 	this.tileset.onload = function() {
 		t.spriteSheet = new SpriteSheet(t.tileset, factionColours);
@@ -59,6 +62,20 @@ Display.prototype.resizeCanvas = function() {
 		this.clearScreen();
 	}
 }
+Display.prototype.switchTileset = function() {
+	this.tilesetID = (this.tilesetID+1) % tilesetNames.length;
+	this.tileset = new Image();
+	this.tileset.crossOrigin = "Anonymous";
+	// location relative to where index.html is, not the script file...
+	this.tileset.src = "Resources/Images/"+tilesetNames[this.tilesetID]+".png";
+	var t = this;
+	this.tileset.onload = function() {
+		t.spriteSheet = new SpriteSheet(t.tileset, factionColours);
+		t.tileset.isLoaded = true;
+		t.refresh();
+	}
+}
+
 Display.prototype.refresh = function() {
 	if (this.lastSimGen !== this.targetSim.generation) this.frame = 0;
 	this.clearScreen();
