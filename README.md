@@ -2,8 +2,10 @@
 Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a project :)
 
 ## Update Log
-current status 12/3/2017:
-- New code base structure is up! Code migration from prototype is 99% complete and the game has classic Civ Tilesets :D Latest version can be accessed in the link below update log
+current status 14/4/2017:
+- finally a chance to do some more work on this! I've tweaked the sidebar and added the beginnings of a minimap. Excited to have some free time to spend on this again :D
+
+- 12/3/2017 New code base structure is up! Code migration from prototype is 99% complete and the game has classic Civ Tilesets :D Latest version can be accessed in the link below update log
 
 - 6/3/2017 Been working on documentation and new code base structure, also blog posting about improved art :D 
 http://tangentialtopics.blogspot.com/2017/03/pocketciv-prototype.html
@@ -14,7 +16,7 @@ https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80
 
 ## Link to in Development Version (0.0.9ish?)
 This *might* be crawling with bugs or totally unusable, you have been warned!
-https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/c22a6176/index.html
+https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/e0e9a874/index.html
 
 ## Controls
 * wasd/arrow keys to move selected unit
@@ -36,51 +38,51 @@ Still working on this, not all files/directories present at the moment...
 
 ## /JavaScript/ subdirectories
 *	Program/
- - Program.js main entrypoint
- - Utilities.js used throughout codebase
- - file handling TODO
- - image loader TODO
- - music loader TODO
+  - Program.js main entrypoint
+  - Utilities.js used throughout codebase
+  - file handling TODO
+  - image loader TODO
+  - music loader TODO
  
 *	Simulation/
- - Simulation.js overarching simulation logic
- - Terrain.js handles terrain generation too
- - Tile.js individual terrain tile
- - RegionDetails.js information on landmasses
- - Faction.js has ownership of faction agents and structure
- - VisionMap.js per faction knowledge of the world
- - Agent.js mobile unit in the world
- - Structure.js static unit in the world
+  - Simulation.js overarching simulation logic
+  - Terrain.js handles terrain generation too
+  - Tile.js individual terrain tile
+  - RegionDetails.js information on landmasses
+  - Faction.js has ownership of faction agents and structure
+  - VisionMap.js per faction knowledge of the world
+  - Agent.js mobile unit in the world
+  - Structure.js static unit in the world
  
 * Display/
- - Display.js main module for output to screen
- - SpriteSheet.js generates unit sprites from faction colours
- - renderer TODO
- - minimap TODO
- - interface  TODO
+  - Display.js main module for output to screen
+  - SpriteSheet.js generates unit sprites from faction colours
+  - renderer TODO
+  - minimap TODO
+  - interface  TODO
 
 * Controls/
- - Control.js handles player input to program
- - mouse TODO
- - keyboard TODO
+  - Control.js handles player input to program
+  - mouse TODO
+  - keyboard TODO
 
 * Audio/ **TODO**
- - sound engine 
- - music player 
+  - sound engine 
+  - music player 
 
 ## Other directories
 * /Resources/
- - Images holds tilesets in various levels of completion
- - sounds TODO
- - music	TODO
+  - Images holds tilesets in various levels of completion
+  - sounds TODO
+  - music	TODO
 
 *	/Ruleset/ **TODO**
- - unit types
- - scenarios
- - fixed maps
+  - unit types
+  - scenarios
+  - fixed maps
 
 *	/Screenshots/
- - Whole lotta screenshots of development progress, put in directories per version?
+  - Whole lotta screenshots of development progress, put in directories per version?
 
 ## Top level files
 * README.md
