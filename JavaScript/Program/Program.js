@@ -24,7 +24,7 @@ Program.prototype.createNewProgram = function() {
 	//enable debug mode for extra stats and info
 	//this.simulation.isDebugMode = true;
 
-	this.display = new Display(this.simulation);
+	this.display = new Display(this.simulation, this.control);
 }
 // main update method, fires on every animation frame (60fps unless browser tab loses focus)
 Program.prototype.update = function() {

@@ -5,6 +5,8 @@ const commandID = {	move:0, settle:1, skip:2, fortify:3,
 function Control(inProgram) {
 	this.targetProgram = inProgram;
 	this.createKeyboardEventHandlers();
+
+	this.mouse = new Mouse();
 }
 Control.prototype.createKeyboardEventHandlers = function() {
 	var t = this;
@@ -58,7 +60,7 @@ Control.prototype.createKeyboardEventHandlers = function() {
 			//	console.log("TODO command: reset sim");
 				t.resetSim();
 				break;
-				
+
 			case 79: // 'o' key
 				console.log("TODO command: switch tileset");
 				t.switchTileset();
@@ -84,6 +86,9 @@ Control.prototype.createKeyboardEventHandlers = function() {
 		}
 	}
 }
+
+
+// commands
 Control.prototype.sendMove = function(dx, dy) {
 	this.targetProgram.simulation.currentPlayerInput = [commandID.move, dx, dy];
 }
@@ -99,7 +104,6 @@ Control.prototype.toggleDebugMode = function() {
 Control.prototype.switchTileset = function() {
 	this.targetProgram.display.switchTileset();
 }
-
 Control.prototype.resetSim = function() {
 	this.targetProgram.createNewProgram();
 }

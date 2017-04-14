@@ -2,8 +2,9 @@
 
 //
 const interfaceColours = {
-	background:"#444444", text:"#ffffff", land:"#89A050",
-	water:"#5897B7", unseen:"#000000", highlight:"#00ff00"
+	background:"#444444", text:"#ffffff", land:"#267F00",
+	water:"#1A2EC9", unseen:"#000000", highlight:"#00ff00",
+	minimap:"#222222"
 };
 
 const tilesetNames = ["Tileset0", "Tileset1"]
@@ -14,15 +15,16 @@ const tilesetNames = ["Tileset0", "Tileset1"]
 //	* Control
 //
 // Constructor takes Simulation module to reference it on refreshes
-function Display(inSimulation) {
+function Display(inSimulation, inControl) {
 	this.targetSim = inSimulation;
+	this.targetControl = inControl;
 	this.frame = 0;
 	this.lastSimGen = 0;
 
 	this.sqSize = 16;
 	this.fontSize = 16;
 	this.scale = 1;
-	this.sidebarWidth = 160;
+	this.sidebarWidth = 240;
 
 	this.spriteSheet = {};
 	this.tilesetID = 0;
@@ -39,9 +41,10 @@ function Display(inSimulation) {
 
 	this.canvas = document.getElementById("pocketCivCanvas");
 	this.ctx = this.canvas.getContext("2d");
+
+	this.sidebar = new Sidebar(this.targetSim, this.targetControl);
+
 	this.resizeCanvas();
-
-
 
 	var t = this;
 	window.onresize = function(){t.resizeCanvas();};
@@ -55,6 +58,8 @@ Display.prototype.resizeCanvas = function() {
 	var heightScale = this.canvas.height/this.targetSim.terrain.height;
 	maxScale = Math.floor(Math.min(widthScale, heightScale));
 	this.sqSize = 16;//maxScale;
+
+	this.sidebar.resizeSidebar();
 
 	if (this.tileset.isLoaded) {
 		this.refresh();
@@ -86,8 +91,12 @@ Display.prototype.refresh = function() {
 	this.drawAgents();
 	this.drawCityDetails();
 	this.drawCurrentAgentHighlight();
-	this.drawUserInterface();
-	if (this.targetSim.isDebugMode) this.showDebugInfo();
+	//update sidebar contents
+	this.sidebar.refreshUserInterface();
+	this.ctx.drawImage(this.sidebar.output, this.canvas.width - this.sidebar.width, 0)
+	//this.drawUserInterface();
+	//this.drawMinimap();
+	//if (this.targetSim.isDebugMode) this.showDebugInfo();
 	this.frame++;
 	this.lastSimGen = this.targetSim.generation;
 }
@@ -326,123 +335,6 @@ Display.prototype.drawCurrentAgentHighlight = function() {
 			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize+sqSize-1, sqSize, 1);
 		}
 	}
-}
-Display.prototype.drawUserInterface = function() {
-	var sim = this.targetSim;
-	var playerID = sim.playerFaction;
-	var offsetX = sim.terrain.width*this.sqSize+5;
-	this.ctx.fillStyle = interfaceColours.text;
-	// TODO
-	// display game details
-	//num cities, num armies
-	var output = "Cities: " + sim.faction[playerID].cityTotal;
-	output += "\t Units: " + sim.faction[playerID].unitTotal;
-	this.ctx.fillText(output, offsetX, this.fontSize);
-	//turn num, date
-	var output = "Turn: "+sim.generation;
-	output += "\t  " + sim.getDate();
-	this.ctx.fillText(output, offsetX, this.fontSize*2);
-	//owned territory, total production (next construction)
-	output = "Area: " + sim.faction[playerID].areaTotal;
-	output += "\t Prod: " + sim.faction[playerID].prodTotal;
-	output += " (" + sim.faction[playerID].nextBuild + " turns)";
-	this.ctx.fillText(output, offsetX, this.fontSize*3);
-
-	// Island details
-	var percent = 0;
-	landmass = sim.faction[playerID].landmassLocation;
-	output = "Unknown lands";
-	for (var i=0; i<landmass.length; i++) {
-		if (landmass[i]>0) {
-			output = sim.terrain.regionDetails[i].name;
-			output += " " + sim.terrain.regionDetails[i].sizeClass + "\n";
-			percent = Math.floor(100*landmass[i]/sim.terrain.regionDetails[i].size);
-		}
-	}
-	this.ctx.fillText(output, offsetX, this.fontSize*5);
-
-	output = "contested? (" + percent + "% of 66%)";
-	this.ctx.fillText(output, offsetX, this.fontSize*6);
-
-	// current selection details
-	// unit type, faction name
-	// movement left, terrain type
-	// city territory?
-	// settlement suitability
-	if (sim.faction[sim.currentFaction].isPlayerControlled
-		&& sim.currentAgent<sim.agent.length
-		&& sim.agent[sim.currentAgent].faction.id == sim.playerFaction ) {
-		this.showSelectionInfo();
-	}
-
-	// buttons: wait and settle
-	this.ctx.fillText("Move with wasd/arrow keys", offsetX, this.fontSize*16);
-	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*17);
-}
-Display.prototype.showSelectionInfo = function() {
-	var agent = this.targetSim.agent[this.targetSim.currentAgent];
-	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
-
-	output = agent.faction.name + " Warrior";
-	this.ctx.fillText(output, offsetX, this.fontSize*8);
-	this.ctx.fillText("Moves: 1/1", offsetX, this.fontSize*9);
-	var x = agent.x;
-	var y = agent.y;
-	var terrain = this.targetSim.terrain.tile[x][y].desirability;
-	switch (terrain) {
-		case ratingID.poor:
-			output = "Plains";
-			break;
-		case ratingID.good:
-			output = "Grassland";
-			break;
-		case ratingID.perfect:
-			output = "Forest";
-			break;
-		default:
-			output = "unknown";
-	}
-	this.ctx.fillText(output + " ("+x+", "+y+") ", offsetX, this.fontSize*10);
-	// settlement rating
-	var rating = agent.faction.visionMap.checkDesirability(x, y);
-	if (rating.valid == false) {
-		this.ctx.fillText("Invalid city location", offsetX, this.fontSize*12);
-	} else {
-		this.ctx.fillText("Location productivity:", offsetX, this.fontSize*12);
-		output = rating.grass;
-		if (rating.unknown>0) {
-			output += " to " + (rating.unknown+rating.grass);
-		}
-		if (rating.unknown>10) {
-			output += "  (uncertain)";
-		} else {
-			output += "  (" + rating.rating + ")";
-		}
-		this.ctx.fillText(output, offsetX, this.fontSize*13);
-		if (rating.grass>=14 || terrain == ratingID.perfect) {
-			this.ctx.fillStyle = interfaceColours.highlight;
-			this.ctx.fillText("Press 'B' to settle", offsetX, this.fontSize*14.5);
-			this.ctx.fillStyle = interfaceColours.text;
-		}
-	}
-}
-Display.prototype.showDebugInfo = function() {
-	var offsetX = this.targetSim.terrain.width*this.sqSize+5;
-	this.ctx.fillStyle = interfaceColours.text;
-
-	//this.ctx.fillText("Window: "+this.canvas.width+" by "+this.canvas.height, offsetX, this.fontSize*2);
-	//this.ctx.fillText("SqSize: "+this.sqSize, offsetX, this.fontSize*3);
-
-	/*for (var i=0; i<this.targetSim.terrain.regionDetails.length; i++) {
-		var output = this.targetSim.terrain.regionDetails[i].name;
-		//output += "size: " + this.targetSim.terrain.islandStats[i];
-		output += " " + this.targetSim.terrain.regionDetails[i].sizeClass;
-		output += " (" + this.targetSim.terrain.regionDetails[i].size+")";
-		this.ctx.fillText(output,offsetX,this.fontSize*(i+14));
-	}*/
-
-	// optional display of tileset graphics	//this.ctx.drawImage(this.spriteSheet.output,offsetX,this.canvas.height-(this.tileset.height+this.spriteSheet.output.height+this.sqSize));
-	//this.ctx.drawImage(this.tileset,offsetX,this.canvas.height-this.tileset.height);
 }
 // sprites :D
 Display.prototype.drawSprite = function(x,y, spriteID, paletteID) {
