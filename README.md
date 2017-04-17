@@ -37,14 +37,14 @@ Turn 100 and the **Utatap** tribe have conquered almost half of the **Memono** s
 Still working on this, not all files/directories present at the moment...
 
 ## /JavaScript/ subdirectories
-*	Program/
+* Program/
   - Program.js main entrypoint
   - Utilities.js used throughout codebase
   - file handling TODO
   - image loader TODO
   - music loader TODO
  
-*	Simulation/
+* Simulation/
   - Simulation.js overarching simulation logic
   - Terrain.js handles terrain generation too
   - Tile.js individual terrain tile
