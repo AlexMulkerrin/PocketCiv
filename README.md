@@ -74,14 +74,14 @@ Still working on this, not all files/directories present at the moment...
 * /Resources/
   - Images holds tilesets in various levels of completion
   - sounds TODO
-  - music	TODO
+  - music TODO
 
-*	/Ruleset/ **TODO**
+* /Ruleset/ **TODO**
   - unit types
   - scenarios
   - fixed maps
 
-*	/Screenshots/
+* /Screenshots/
   - Whole lotta screenshots of development progress, put in directories per version?
 
 ## Top level files
