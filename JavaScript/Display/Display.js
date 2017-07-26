@@ -7,7 +7,7 @@ const interfaceColours = {
 	minimap:"#222222",
 	buttonNetural:"#EEEEEE", buttonClick:"#bbccff",
 	buttonSelect:"#dddddd", buttonHover:"#ddf5ff",
-	buttonText: "#1122CC"
+	buttonText: "#1122CC", buttonBackground:"#395C75"
 };
 
 const tilesetNames = ["Tileset0", "Tileset1"]
@@ -439,6 +439,13 @@ Display.prototype.drawTile = function(x, y, index) {
 }
 
 Display.prototype.drawButtons = function() {
+	//TODO remove hack here to hide extra text underneath button backing
+	this.ctx.fillStyle = interfaceColours.buttonBackground;
+	var w = window.innerWidth;
+	var h = window.innerHeight;
+	this.ctx.fillRect(w-240, h-150, 240, 150);
+
+
 	var buttons = this.targetControl.buttons;
 	for (var i=0; i<buttons.length; i++) {
 		this.drawButton(buttons[i]);

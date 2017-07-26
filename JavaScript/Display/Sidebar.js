@@ -23,7 +23,7 @@ Sidebar.prototype.refreshUserInterface = function() {
 	this.drawMinimap();
 	this.showGameDetails();
 	this.showLandmassDetails();
-	this.showTutorialText();
+
 	var sim = this.targetSim;
 	var playerID = sim.playerFaction;
 	if (sim.faction[sim.currentFaction].isPlayerControlled
@@ -31,6 +31,7 @@ Sidebar.prototype.refreshUserInterface = function() {
 		&& sim.agent[sim.currentAgent].faction.id == sim.playerFaction ) {
 		this.showSelectionInfo();
 	}
+	this.showTutorialText();
 	this.showCursorInfo();
 }
 Sidebar.prototype.clearSidebar = function() {
@@ -47,18 +48,18 @@ Sidebar.prototype.showGameDetails = function() {
 	//num cities, num armies
 	var output = "Cities: " + sim.faction[playerID].cityTotal;
 	output += "\t Units: " + sim.faction[playerID].unitTotal;
-	this.ctx.fillText(output, offsetX, this.fontSize);
+	this.ctx.fillText(output, offsetX, this.fontSize*9);
 
 	//turn num, date
 	var output = "Turn: "+sim.generation;
 	output += "\t  " + sim.getDate();
-	this.ctx.fillText(output, offsetX, this.fontSize*2);
+	this.ctx.fillText(output, offsetX, this.fontSize*10);
 
 	//owned territory, total production (next construction)
 	output = "Area: " + sim.faction[playerID].areaTotal;
 	output += "\t Prod: " + sim.faction[playerID].prodTotal;
 	output += " (" + sim.faction[playerID].nextBuild + " turns)";
-	this.ctx.fillText(output, offsetX, this.fontSize*3);
+	this.ctx.fillText(output, offsetX, this.fontSize*11);
 }
 Sidebar.prototype.showLandmassDetails = function() {
 	var sim = this.targetSim;
@@ -75,16 +76,16 @@ Sidebar.prototype.showLandmassDetails = function() {
 			percent = Math.floor(100*landmass[i]/sim.terrain.regionDetails[i].size);
 		}
 	}
-	this.ctx.fillText(output, offsetX, this.fontSize*5);
+	this.ctx.fillText(output, offsetX, this.fontSize*13);
 
 	output = "contested? (" + percent + "% of 66%)";
-	this.ctx.fillText(output, offsetX, this.fontSize*6);
+	this.ctx.fillText(output, offsetX, this.fontSize*14);
 }
 Sidebar.prototype.showTutorialText = function() {
 	var offsetX = 5;
 	// buttons: wait and settle
-	this.ctx.fillText("Move with wasd/arrow keys", offsetX, this.fontSize*16);
-	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*17);
+	this.ctx.fillText("Move with wasd/arrow keys", offsetX, this.fontSize*24);
+	this.ctx.fillText("or skip turn with spacebar", offsetX, this.fontSize*25);
 }
 Sidebar.prototype.showSelectionInfo = function() {
 	// current selection details
@@ -97,8 +98,8 @@ Sidebar.prototype.showSelectionInfo = function() {
 	var offsetX = 5;
 
 	output = agent.faction.name + " Warrior";
-	this.ctx.fillText(output, offsetX, this.fontSize*8);
-	this.ctx.fillText("Moves: 1/1", offsetX, this.fontSize*9);
+	this.ctx.fillText(output, offsetX, this.fontSize*16);
+	this.ctx.fillText("Moves: 1/1", offsetX, this.fontSize*17);
 	var x = agent.x;
 	var y = agent.y;
 	var terrain = this.targetSim.terrain.tile[x][y].desirability;
@@ -115,13 +116,13 @@ Sidebar.prototype.showSelectionInfo = function() {
 		default:
 			output = "unknown";
 	}
-	this.ctx.fillText(output + " ("+x+", "+y+") ", offsetX, this.fontSize*10);
+	this.ctx.fillText(output + " ("+x+", "+y+") ", offsetX, this.fontSize*18);
 	// settlement rating
 	var rating = agent.faction.visionMap.checkDesirability(x, y);
 	if (rating.valid == false) {
-		this.ctx.fillText("Invalid city location", offsetX, this.fontSize*12);
+		this.ctx.fillText("Invalid city location", offsetX, this.fontSize*19);
 	} else {
-		this.ctx.fillText("Location productivity:", offsetX, this.fontSize*12);
+		this.ctx.fillText("Location productivity:", offsetX, this.fontSize*20);
 		output = rating.grass;
 		if (rating.unknown>0) {
 			output += " to " + (rating.unknown+rating.grass);
@@ -131,10 +132,10 @@ Sidebar.prototype.showSelectionInfo = function() {
 		} else {
 			output += "  (" + rating.rating + ")";
 		}
-		this.ctx.fillText(output, offsetX, this.fontSize*13);
+		this.ctx.fillText(output, offsetX, this.fontSize*21);
 		if (rating.grass>=14 || terrain == ratingID.perfect) {
 			this.ctx.fillStyle = interfaceColours.highlight;
-			this.ctx.fillText("Press 'B' to settle", offsetX, this.fontSize*14.5);
+			this.ctx.fillText("Press 'B' to settle", offsetX, this.fontSize*22.5);
 			this.ctx.fillStyle = interfaceColours.text;
 		}
 	}
@@ -147,10 +148,10 @@ Sidebar.prototype.showCursorInfo = function() { //TODO make method cache the tex
 
 
 	var mouse = this.targetControl.mouse;
-	this.ctx.fillText("Mouse: "+mouse.x+", "+mouse.y, offsetX, this.fontSize*19);
+	this.ctx.fillText("Mouse: "+mouse.x+", "+mouse.y, offsetX, this.fontSize*27);
 	var tileX = Math.floor(mouse.x/sqSize);
 	var tileY = Math.floor(mouse.y/sqSize);
-	this.ctx.fillText("Mouse: "+tileX+", "+tileY, offsetX, this.fontSize*20);
+	this.ctx.fillText("Mouse: "+tileX+", "+tileY, offsetX, this.fontSize*28);
 	var output = "-";
 	if (map.isInBounds(tileX,tileY)) {
 		var terrain = map.tile[tileX][tileY].type;
@@ -181,7 +182,7 @@ Sidebar.prototype.showCursorInfo = function() { //TODO make method cache the tex
 				output = "error";
 		}
 
-		this.ctx.fillText("Terrain: "+output, offsetX, this.fontSize*21);
+		this.ctx.fillText("Terrain: "+output, offsetX, this.fontSize*29);
 
 		if (map.tile[tileX][tileY].type !== terrainID.unknown || this.targetSim.isDebugMode) {
 			// display unit details
@@ -189,19 +190,19 @@ Sidebar.prototype.showCursorInfo = function() { //TODO make method cache the tex
 			for (var i=0; i<agent.length; i++) {
 				if (tileX == agent[i].x && tileY == agent[i].y
 					&& agent[i].isAlive) {
-						this.ctx.fillText(agent[i].faction.name+" Warrior", offsetX, this.fontSize*22);
+						this.ctx.fillText(agent[i].faction.name+" Warrior", offsetX, this.fontSize*30);
 				}
 			}
 			// display city details
 			if (this.targetSim.terrain.tile[tileX][tileY].cityPresent !== NONE) {
 				var name = this.targetSim.terrain.tile[tileX][tileY].cityPresent.name;
 				var faction = this.targetSim.terrain.tile[tileX][tileY].cityPresent.faction.name;
-				this.ctx.fillText(faction+" city of "+name, offsetX, this.fontSize*23);
+				this.ctx.fillText(faction+" city of "+name, offsetX, this.fontSize*31);
 			}
 			// display territory details
 			if (this.targetSim.terrain.tile[tileX][tileY].cityTerritory !== NONE) {
 				var city = this.targetSim.terrain.tile[tileX][tileY].cityTerritory;
-				this.ctx.fillText(city.faction.name+" territory", offsetX, this.fontSize*24);
+				this.ctx.fillText(city.faction.name+" territory", offsetX, this.fontSize*32);
 
 			}
 		}
@@ -211,7 +212,7 @@ Sidebar.prototype.showCursorInfo = function() { //TODO make method cache the tex
 }
 Sidebar.prototype.drawMinimap = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
-	var offsetY = 400;
+	var offsetY = 0;
 	var offsetX = 0;
 	var sqSize = 3;
 
