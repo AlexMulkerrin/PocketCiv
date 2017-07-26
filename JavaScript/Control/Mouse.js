@@ -50,8 +50,10 @@ Mouse.prototype.checkHover = function(button) {
 Mouse.prototype.mousePressed = function (event) {
     this.buttonPressed = event.which;
     this.isPressed = true;
+	this.checkHover();
 }
 Mouse.prototype.mouseReleased = function (event) {
     this.isPressed = false;
 	this.isReleased = true;
+	this.checkHover();
 }

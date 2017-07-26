@@ -5,8 +5,8 @@ const interfaceColours = {
 	background:"#444444", text:"#ffffff", land:"#267F00",
 	water:"#1A2EC9", unseen:"#000000", highlight:"#00ff00",
 	minimap:"#222222",
-	buttonNetural:"#EEEEEE", buttonClick:"#dddddd",
-	buttonSelect:"#bbccff", buttonHover:"#ddf5ff",
+	buttonNetural:"#EEEEEE", buttonClick:"#bbccff",
+	buttonSelect:"#dddddd", buttonHover:"#ddf5ff",
 	buttonText: "#1122CC"
 };
 

@@ -93,17 +93,29 @@ Control.prototype.createButtons = function() {
 	var w = window.innerWidth;
 	var h = window.innerHeight;
 	// Button(x, y, width, height, icon, hotkey, func, funcArgs)
-	this.buttons.push( new Button(w-64, h-64, 64, 64, null, "B", "sendSettle"));
-	this.buttons.push( new Button(w-32, h-104, 32, 32, null, "F", "notImplemented"));
-	this.buttons.push( new Button(w-32, h-232, 32, 32, null, "Spacebar", "sendSkip"));
+	// TODO arrange interface so that these buttons fit on nicely
+	this.buttons.push( new Button(w-80, h-128, 64, 64, null, "Build", "sendSettle"));
+	//this.buttons.push( new Button(w-32, h-104, 32, 32, null, "F", "notImplemented"));
+	this.buttons.push( new Button(w-80, h-48, 64, 32, null, "Skip", "sendSkip"));
 
-	this.buttons.push( new Button(w-160, h-104, 32, 32, null, "G", "notImplemented"));
-	this.buttons.push( new Button(w-144, h-48, 64, 32, null, "Tab", "notImplemented"));
-	this.buttons.push( new Button(w-160, h-232, 32, 32, null, "Delete", "notImplemented"));
+	//this.buttons.push( new Button(w-160, h-104, 32, 32, null, "G", "notImplemented"));
+	//this.buttons.push( new Button(w-144, h-48, 64, 32, null, "Tab", "notImplemented"));
+	//this.buttons.push( new Button(w-160, h-232, 32, 32, null, "Delete", "notImplemented"));
+
+	//temporary directional buttons
+	this.buttons.push( new Button(w-180, h-52, 32, 32, null, "S", "sendMove",[0, 1]));
+	this.buttons.push( new Button(w-180, h-136, 32, 32, null, "W", "sendMove",[0, -1]));
+	this.buttons.push( new Button(w-222, h-94, 32, 32, null, "A", "sendMove",[-1, 0]));
+	this.buttons.push( new Button(w-138, h-94, 32, 32, null, "D", "sendMove",[1, 0]));
 }
 
 // commands
 Control.prototype.sendMove = function(dx, dy) {
+	// handle array as input
+	if (dx.length>1) {
+		dy = dx[1];
+		dx = dx[0];
+	}
 	this.targetProgram.simulation.currentPlayerInput = [commandID.move, dx, dy];
 }
 Control.prototype.sendSettle = function() {
