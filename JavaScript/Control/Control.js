@@ -6,7 +6,9 @@ function Control(inProgram) {
 	this.targetProgram = inProgram;
 	this.createKeyboardEventHandlers();
 
-	this.mouse = new Mouse();
+	this.mouse = new Mouse(this);
+	this.buttons = [];
+	this.createButtons();
 }
 Control.prototype.createKeyboardEventHandlers = function() {
 	var t = this;
@@ -87,6 +89,18 @@ Control.prototype.createKeyboardEventHandlers = function() {
 	}
 }
 
+Control.prototype.createButtons = function() {
+	var w = window.innerWidth;
+	var h = window.innerHeight;
+	// Button(x, y, width, height, icon, hotkey, func, funcArgs)
+	this.buttons.push( new Button(w-64, h-64, 64, 64, null, "B", "sendSettle"));
+	this.buttons.push( new Button(w-32, h-104, 32, 32, null, "F", "notImplemented"));
+	this.buttons.push( new Button(w-32, h-232, 32, 32, null, "Spacebar", "sendSkip"));
+
+	this.buttons.push( new Button(w-160, h-104, 32, 32, null, "G", "notImplemented"));
+	this.buttons.push( new Button(w-144, h-48, 64, 32, null, "Tab", "notImplemented"));
+	this.buttons.push( new Button(w-160, h-232, 32, 32, null, "Delete", "notImplemented"));
+}
 
 // commands
 Control.prototype.sendMove = function(dx, dy) {
@@ -113,4 +127,7 @@ Control.prototype.toggleAutoEndTurn = function() {
 Control.prototype.retire = function() {
 	var sim = this.targetProgram.simulation;
 	sim.faction[sim.playerFaction].isPlayerControlled = false
+}
+Control.prototype.notImplemented = function() {
+	console.log("TODO command: no effect");
 }

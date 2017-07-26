@@ -1,8 +1,16 @@
 // Program class, root of whole Application
 
+/* !!! ATTENTION !!!
+* The main program object which holds the entire client state is a global!
+* this means that you can hack the game in real time :O
+* Doing things like:
+* "program.simulation.isDebugMode = true" whenever you please :!
+* You could do *anything* you please with the client state, it's an open book :D */
+var program;
+
 // loader function invoked on page load
 function loadProgram() {
-	var program = new Program();
+	program = new Program();
 	window.requestAnimationFrame( function(){program.update();});
 }
 

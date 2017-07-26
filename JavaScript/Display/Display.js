@@ -4,7 +4,10 @@
 const interfaceColours = {
 	background:"#444444", text:"#ffffff", land:"#267F00",
 	water:"#1A2EC9", unseen:"#000000", highlight:"#00ff00",
-	minimap:"#222222"
+	minimap:"#222222",
+	buttonNetural:"#EEEEEE", buttonClick:"#dddddd",
+	buttonSelect:"#bbccff", buttonHover:"#ddf5ff",
+	buttonText: "#1122CC"
 };
 
 const tilesetNames = ["Tileset0", "Tileset1"]
@@ -97,6 +100,8 @@ Display.prototype.refresh = function() {
 	//this.drawUserInterface();
 	//this.drawMinimap();
 	//if (this.targetSim.isDebugMode) this.showDebugInfo();
+		this.drawButtons();
+
 	this.frame++;
 	this.lastSimGen = this.targetSim.generation;
 }
@@ -431,4 +436,27 @@ Display.prototype.drawTile = function(x, y, index) {
 	var sx = (index % 4)*17;
 	var sy = Math.floor(index/4)*17;
 	this.ctx.drawImage(this.tileset, sx, sy, 16, 16, x, y, 16*this.scale, 16*this.scale);
+}
+
+Display.prototype.drawButtons = function() {
+	var buttons = this.targetControl.buttons;
+	for (var i=0; i<buttons.length; i++) {
+		this.drawButton(buttons[i]);
+	}
+}
+Display.prototype.drawButton = function(button) {
+	var nx,ny;
+	if (button.isClicked) {
+		this.ctx.fillStyle = interfaceColours.buttonClick;
+	} else if (button.isSelected) {
+		this.ctx.fillSytle = interfaceColours.buttonSelect;
+	} else if (button.isHovered) {
+		this.ctx.fillStyle = interfaceColours.buttonHover;
+	} else {
+		this.ctx.fillStyle = interfaceColours.buttonNetural;
+	}
+	this.ctx.fillRect(button.x, button.y, button.width, button.height);
+
+	this.ctx.fillStyle = interfaceColours.buttonText;
+	this.ctx.fillText(button.hotkey, button.x+this.fontSize*0.5, button.y+this.fontSize*1.5);
 }

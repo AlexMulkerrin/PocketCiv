@@ -15,6 +15,16 @@ function randomRGBString() {
 	}
 	return colourstring;
 }
+function randomGreyTone(noise) {
+	var colourstring='#';
+	var brightness = Math.random();
+	for (var i=0; i<6; i++) {
+	hexDigit = Math.floor(randomInteger(16)*brightness);
+	hexDigit = hexDigit.toString(16);
+	colourstring += hexDigit;
+	}
+	return colourstring;
+}
 // wrapper function
 function randomBool() {
 	if (Math.random()>0.5) {
@@ -84,7 +94,7 @@ function RGBtoHSL(red, green, blue) {
 	var max = Math.max(red, green, blue);
 	var min = Math.min(red, green, blue);
 	lum = (max + min) / 2;
-	
+
 	if (max == min) { // monochrome
 		hue = 0;
 		sat = 0;
@@ -98,7 +108,7 @@ function RGBtoHSL(red, green, blue) {
 		switch (max) {
 			case red:
 				hue = (green - blue) / delta;
-				if (green < blue) hue += 6;	
+				if (green < blue) hue += 6;
 				break;
 			case green:
 				hue = ((blue - red) / delta) + 2;

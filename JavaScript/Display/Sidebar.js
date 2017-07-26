@@ -6,6 +6,8 @@ function Sidebar(inSimulation, inControl) {
 	this.width = 240;
 	this.fontSize = 16;
 
+	this.cursorInfoCache = {}; // TODO populate this when mouse moves to new tile
+
 	this.output =  document.createElement('canvas');
 	this.ctx = this.output.getContext("2d");
 	this.resizeSidebar();
