@@ -58,7 +58,7 @@ Display.prototype.resizeCanvas = function() {
 	this.ctx.font = "bold "+this.fontSize+"px Arial";
 
 	// TODO keep pixellated image. will this work?
-	//this.ctx.mozImageSmoothingEnabled = false;
+	//this.ctx.mozImageSmoothingEnabled = false; // firefox has depreciated this
  	this.ctx.webkitImageSmoothingEnabled = false;
  	this.ctx.msImageSmoothingEnabled = false;
  	this.ctx.imageSmoothingEnabled = false;

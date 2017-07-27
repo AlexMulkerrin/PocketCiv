@@ -4,6 +4,7 @@ const commandID = {	move:0, settle:1, skip:2, fortify:3,
 
 function Control(inProgram) {
 	this.targetProgram = inProgram;
+	//TODO create keyboard submodule?
 	this.createKeyboardEventHandlers();
 
 	this.mouse = new Mouse(this);
