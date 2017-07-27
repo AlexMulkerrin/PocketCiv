@@ -72,14 +72,14 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				t.switchTileset();
 				break;
 
-			case 187:
-			case 173: // '-' key, reduce zoom (187 in chrome)
+			case 189:
+			case 173: // '-' key, reduce zoom (189 in chrome)
 				//console.log("TODO command: reduce zoom");
 				t.changeZoom(-1);
 				break;
 
-			case 189:
-			case 61: // '+' key, increase zoom (189 in chrome)
+			case 187:
+			case 61: // '+' key, increase zoom (187 in chrome)
 				//console.log("TODO command: increase zoom");
 				t.changeZoom(1);
 				break;
