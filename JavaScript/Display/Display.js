@@ -26,7 +26,7 @@ function Display(inSimulation, inControl) {
 
 	this.sqSize = 16;
 	this.fontSize = 16;
-	this.scale = 1;
+	this.scale = 4;
 	this.sidebarWidth = 240;
 
 	this.spriteSheet = {};
@@ -46,9 +46,9 @@ function Display(inSimulation, inControl) {
 	this.ctx = this.canvas.getContext("2d");
 
 	this.sidebar = new Sidebar(this.targetSim, this.targetControl);
+	this.setScale();
 
 	this.resizeCanvas();
-
 	var t = this;
 	window.onresize = function(){t.resizeCanvas();};
 }
@@ -57,10 +57,18 @@ Display.prototype.resizeCanvas = function() {
 	this.canvas.height = window.innerHeight;
 	this.ctx.font = "bold "+this.fontSize+"px Arial";
 
-	var widthScale = (this.canvas.width- this.sidebarWidth)/this.targetSim.terrain.width ;
-	var heightScale = this.canvas.height/this.targetSim.terrain.height;
-	maxScale = Math.floor(Math.min(widthScale, heightScale));
-	this.sqSize = 16;//maxScale;
+	// TODO keep pixellated image. will this work?
+	//this.ctx.mozImageSmoothingEnabled = false;
+ 	this.ctx.webkitImageSmoothingEnabled = false;
+ 	this.ctx.msImageSmoothingEnabled = false;
+ 	this.ctx.imageSmoothingEnabled = false;
+
+	// old scale finding algo, scale is now set by player
+	//var widthScale = (this.canvas.width- this.sidebarWidth)/this.targetSim.terrain.width ;
+	//var heightScale = this.canvas.height/this.targetSim.terrain.height;
+	//maxScale = Math.floor(Math.min(widthScale, heightScale));
+	this.sqSize = 16 * this.scale;
+	//	this.sqSize = 64;//maxScale;
 
 	this.sidebar.resizeSidebar();
 
@@ -69,7 +77,17 @@ Display.prototype.resizeCanvas = function() {
 	} else {
 		this.clearScreen();
 	}
+
+	//TODO call resize event for the buttons of controller and also resize the
+	// view object.
+	this.targetControl.createButtons();
+
 }
+Display.prototype.setScale = function() {
+	this.scale = this.targetControl.view.zoom;
+	this.sqSize = 16 * this.scale;
+}
+
 Display.prototype.switchTileset = function() {
 	this.tilesetID = (this.tilesetID+1) % tilesetNames.length;
 	this.tileset = new Image();
@@ -114,34 +132,42 @@ Display.prototype.drawMainMap = function() {
 	if (this.targetSim.isDebugMode) {
 		map = this.targetSim.terrain;
 	}
+	var view = this.targetControl.view;
+
+	// background default to unseen tile colour
 	this.ctx.fillStyle = interfaceColours.unseen;
-	this.ctx.fillRect(0,0,map.width*this.sqSize, map.height*this.sqSize);
+	this.ctx.fillRect(0,0,view.width*this.sqSize, view.height*this.sqSize);
 
-	for (var i=0; i<map.width; i++) {
-		for (var j=0; j<map.height; j++) {
-			if (map.tile[i][j].type == terrainID.grass) {
-				switch (map.tile[i][j].desirability) {
-					case ratingID.perfect:
-						this.drawTile(i*this.sqSize,j*this.sqSize, 3);
-						break;
+	for (var i=0; i<view.width; i++) {
+		for (var j=0; j<view.height; j++) {
+			// check that x,y is valid map coords
+			var x = view.cornerX+i;
+			var y = view.cornerY+j;
+			if (x>=0 && x<map.width && y>=0 && y<map.height) {
 
-					case ratingID.good:
-						this.drawTile(i*this.sqSize,j*this.sqSize, 2);
-						break;
+				if (map.tile[x][y].type == terrainID.grass) {
+					switch (map.tile[x][y].desirability) {
+						case ratingID.perfect:
+							this.drawTile(i*this.sqSize,j*this.sqSize, 3);
+							break;
 
-					case ratingID.poor:
-					default:
-						this.drawTile(i*this.sqSize,j*this.sqSize, 1);
-						break;
-				}
-			} else if (map.tile[i][j].type == terrainID.water) {
-				if (map.tile[i][j].isCoast) {
-					this.drawCoastTile(i*this.sqSize,j*this.sqSize, map.tile[i][j]);
-				} else {
-					this.drawTile(i*this.sqSize,j*this.sqSize, 0);
+						case ratingID.good:
+							this.drawTile(i*this.sqSize,j*this.sqSize, 2);
+							break;
+
+						case ratingID.poor:
+						default:
+							this.drawTile(i*this.sqSize,j*this.sqSize, 1);
+							break;
+					}
+				} else if (map.tile[x][y].type == terrainID.water) {
+					if (map.tile[x][y].isCoast) {
+						this.drawCoastTile(i*this.sqSize,j*this.sqSize, map.tile[x][y]);
+					} else {
+						this.drawTile(i*this.sqSize,j*this.sqSize, 0);
+					}
 				}
 			}
-
 		}
 	}
 }
@@ -149,12 +175,16 @@ Display.prototype.drawStructures = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	var x, y, paletteID;
 	var city = this.targetSim.city;
+	var view = this.targetControl.view;
+
 	for (var i=0; i<city.length; i++) {
 		x = city[i].x;
 		y = city[i].y;
 		paletteID = city[i].faction.paletteID;
 		if (map.tile[x][y].state == visionID.seen || this.targetSim.isDebugMode) {
-			this.drawSprite(x*this.sqSize,y*this.sqSize, 1, paletteID);
+			var nx = x - view.cornerX;
+			var ny = y - view.cornerY;
+			this.drawSprite(nx*this.sqSize,ny*this.sqSize, 1, paletteID);
 		}
 	}
 }
@@ -163,6 +193,8 @@ Display.prototype.drawBorders = function() {
 	if (this.targetSim.isDebugMode) {
 		map = this.targetSim.terrain;
 	}
+	var view = this.targetControl.view;
+
 	for (var i=0; i<map.width; i++) {
 		for (var j=0; j<map.height; j++) {
 			if (map.tile[i][j].cityTerritory !== NONE) {
@@ -180,8 +212,8 @@ Display.prototype.drawBorders = function() {
 					}
 				}
 				// check cases to display subtiles
-				var x = i*this.sqSize;
-				var y = j*this.sqSize;
+				var x = (i-view.cornerX)*this.sqSize;
+				var y = (j-view.cornerY)*this.sqSize;
 				// middle edges
 				if (adj[0]) {
 					this.drawBorderEdge(x, y, 0, paletteID);
@@ -247,6 +279,8 @@ Display.prototype.drawAgents = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
 	var x, y, paletteID;
 	var agent = this.targetSim.agent;
+	var view = this.targetControl.view;
+
 	for (var i=0; i<agent.length; i++) {
 		if (agent[i].isAlive) {
 			x = agent[i].x;
@@ -254,13 +288,18 @@ Display.prototype.drawAgents = function() {
 			paletteID = agent[i].faction.paletteID;
 			if ((map.tile[x][y].state == visionID.seen && map.tile[x][y].lastSeen >= this.targetSim.generation)
 				|| this.targetSim.isDebugMode) {
-				this.drawSprite(x*this.sqSize,y*this.sqSize, 0, paletteID);
+
+					var nx = x - view.cornerX;
+					var ny = y - view.cornerY;
+				this.drawSprite(nx*this.sqSize,ny*this.sqSize, 0, paletteID);
 			}
 		}
 	}
 }
 Display.prototype.drawFogOfWar = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	var view = this.targetControl.view;
+
 	// totally unknown
 	if (this.targetSim.isDebugMode == false) {
 		for (var i=0; i<map.width; i++) {
@@ -281,7 +320,10 @@ Display.prototype.drawFogOfWar = function() {
 				if (map.tile[i][j].lastSeen >= this.targetSim.generation) {
 					this.drawAdjacentFog(i, j, map, true);
 				} else {
-					this.ctx.fillRect( i*this.sqSize, j*this.sqSize, this.sqSize, this.sqSize);
+					this.ctx.fillRect(
+						(i-view.cornerX)*this.sqSize,
+						(j-view.cornerY)*this.sqSize,
+						this.sqSize, this.sqSize);
 				}
 			}
 		}
@@ -289,6 +331,8 @@ Display.prototype.drawFogOfWar = function() {
 	this.ctx.globalAlpha=1;
 }
 Display.prototype.drawAdjacentFog = function(x, y, visionMap, isFogofWar) {
+	var view = this.targetControl.view;
+
 	var adj = [ [0,-1],[0,1], [-1,0], [1,0] ];
 	for (var e=0; e<adj.length; e++) {
 		var nx = x + adj[e][0];
@@ -296,10 +340,13 @@ Display.prototype.drawAdjacentFog = function(x, y, visionMap, isFogofWar) {
 		if (visionMap.isInBounds(nx,ny) ) {
 			 if (visionMap.tile[nx][ny].state == visionID.unseen
 			 	|| (visionMap.tile[nx][ny].lastSeen < this.targetSim.generation && isFogofWar) ) {
+
+				nx = x - view.cornerX;
+				ny = y - view.cornerY;
 				if (e>1) {
-					this.drawHalfTile(x*this.sqSize,y*this.sqSize, 15, e);
+					this.drawHalfTile(nx*this.sqSize,ny*this.sqSize, 15, e);
 				} else {
-					this.drawHalfTile(x*this.sqSize,y*this.sqSize, 14, e);
+					this.drawHalfTile(nx*this.sqSize,ny*this.sqSize, 14, e);
 				}
 			}
 		}
@@ -311,6 +358,8 @@ Display.prototype.drawCityDetails = function() {
 	var fontSize = 2*this.fontSize/3;
 	this.ctx.font = "bold "+fontSize+"px Arial";
 	var city = this.targetSim.city;
+	var view = this.targetControl.view;
+
 	for (var i=0; i<city.length; i++) {
 		x = city[i].x;
 		y = city[i].y;
@@ -319,25 +368,34 @@ Display.prototype.drawCityDetails = function() {
 			var output = city[i].name + " (" + city[i].timeToBuild + ")";
 			// drop shadow :P
 			this.ctx.fillStyle = interfaceColours.unseen;
-			this.ctx.fillText(output, x*this.sqSize-(output.length/5)*fontSize+1, y*this.sqSize+fontSize*3+2);
+			this.ctx.fillText(output,
+				(x-view.cornerX)*this.sqSize-(output.length/5)*fontSize+1,
+				(y-view.cornerY)*this.sqSize+fontSize*3+2);
 			this.ctx.fillStyle = interfaceColours.text;
-			this.ctx.fillText(output, x*this.sqSize-(output.length/5)*fontSize, y*this.sqSize+fontSize*3);
+			this.ctx.fillText(output,
+				(x-view.cornerX)*this.sqSize-(output.length/5)*fontSize,
+				(y-view.cornerY)*this.sqSize+fontSize*3);
 		}
 	}
 	this.ctx.font = "bold "+this.fontSize+"px Arial";
 }
 Display.prototype.drawCurrentAgentHighlight = function() {
 	var sim = this.targetSim;
+	var view = this.targetControl.view;
+
 	if (sim.faction[sim.currentFaction].isPlayerControlled && sim.currentAgent<sim.agent.length) {
 		var agent = this.targetSim.agent[this.targetSim.currentAgent];
 		if (agent.faction.id == sim.playerFaction) {
 			var sqSize = this.sqSize;
 			this.ctx.fillStyle = interfaceColours.text;
 			if (this.frame % 40 < 20) this.ctx.fillStyle = "#00ff00";
-			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, 1, sqSize);
-			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize, sqSize, 1);
-			this.ctx.fillRect(agent.x*sqSize+sqSize-1, agent.y*sqSize, 1, sqSize);
-			this.ctx.fillRect(agent.x*sqSize, agent.y*sqSize+sqSize-1, sqSize, 1);
+
+			var x = agent.x - view.cornerX;
+			var y = agent.y - view.cornerY;
+			this.ctx.fillRect(x*sqSize, y*sqSize, 1, sqSize);
+			this.ctx.fillRect(x*sqSize, y*sqSize, sqSize, 1);
+			this.ctx.fillRect(x*sqSize+sqSize-1, y*sqSize, 1, sqSize);
+			this.ctx.fillRect(x*sqSize, y*sqSize+sqSize-1, sqSize, 1);
 		}
 	}
 }
@@ -358,13 +416,13 @@ Display.prototype.drawBorderEdge = function(x, y, edgeID, paletteID, isCornerEdg
 	var qx, qy;
 	var dx, dy;
 	if (isCornerEdge>0) {
-		qx = x + cornerPos[isCornerEdge-1][0];
-		qy = y + cornerPos[isCornerEdge-1][1];
+		qx = x + cornerPos[isCornerEdge-1][0]*this.scale;
+		qy = y + cornerPos[isCornerEdge-1][1]*this.scale;
 		dx = 4;
 		dy = 4;
 	} else {
-		qx = x + edgePos[edgeID][0];
-		qy = y + edgePos[edgeID][1];
+		qx = x + edgePos[edgeID][0]*this.scale;
+		qy = y + edgePos[edgeID][1]*this.scale;
 		dx = edgeDim[edgeID][0];
 		dy = edgeDim[edgeID][1];
 	}
@@ -382,8 +440,8 @@ Display.prototype.drawBorderCorner = function(x, y, cornerID, paletteID, isInner
 		sx = index*16 + cornerPos[cornerID][0];
 		sy = paletteID*16 + cornerPos[cornerID][1];
 	}
-	var qx = x + cornerPos[cornerID][0];
-	var qy = y + cornerPos[cornerID][1];
+	var qx = x + cornerPos[cornerID][0]*this.scale;
+	var qy = y + cornerPos[cornerID][1]*this.scale;
 	this.ctx.drawImage(this.spriteSheet.output, sx, sy, 4, 4, qx, qy, 4*this.scale, 4*this.scale);
 }
 // tile manipulation
@@ -416,16 +474,16 @@ Display.prototype.drawQuarterTile = function(x, y, index, quarterID) {
 	var quarterPos = [ [8,0], [8,8], [0,8], [0,0] ];
 	var sx = (index % 4)*17 + quarterPos[quarterID][0];
 	var sy = Math.floor(index/4)*17 + quarterPos[quarterID][1];
-	var qx = x + quarterPos[quarterID][0];
-	var qy = y + quarterPos[quarterID][1];
+	var qx = x + quarterPos[quarterID][0]*this.scale;
+	var qy = y + quarterPos[quarterID][1]*this.scale;
 	this.ctx.drawImage(this.tileset, sx, sy, 8, 8, qx, qy, 8*this.scale, 8*this.scale);
 }
 Display.prototype.drawHalfTile = function(x, y, index, halfID) {
 	var halfPos = [ [0,0], [0,8], [0,0], [8,0] ];
 	var sx = (index % 4)*17 + halfPos[halfID][0];
 	var sy = Math.floor(index/4)*17 + halfPos[halfID][1];
-	var qx = x + halfPos[halfID][0];
-	var qy = y + halfPos[halfID][1];
+	var qx = x + halfPos[halfID][0]*this.scale;
+	var qy = y + halfPos[halfID][1]*this.scale;
 	if (halfID>1) {
 		this.ctx.drawImage(this.tileset, sx, sy, 8, 16, qx, qy, 8*this.scale, 16*this.scale);
 	} else {

@@ -39,6 +39,7 @@ Program.prototype.update = function() {
 	this.timer++;
 	if (this.timer % this.updateRate == 0) {
 		this.simulation.update();
+		this.control.update();
 		if (this.display.tileset.isLoaded) this.display.refresh();
 	}
 	var t = this;

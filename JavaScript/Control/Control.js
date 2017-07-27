@@ -9,6 +9,9 @@ function Control(inProgram) {
 	this.mouse = new Mouse(this);
 	this.buttons = [];
 	this.createButtons();
+
+	this.view = new View();
+
 }
 Control.prototype.createKeyboardEventHandlers = function() {
 	var t = this;
@@ -90,6 +93,7 @@ Control.prototype.createKeyboardEventHandlers = function() {
 }
 
 Control.prototype.createButtons = function() {
+	this.buttons = [];
 	var w = window.innerWidth;
 	var h = window.innerHeight;
 	// Button(x, y, width, height, icon, hotkey, func, funcArgs)
@@ -107,6 +111,19 @@ Control.prototype.createButtons = function() {
 	this.buttons.push( new Button(w-180, h-136, 32, 32, null, "W", "sendMove",[0, -1]));
 	this.buttons.push( new Button(w-222, h-94, 32, 32, null, "A", "sendMove",[-1, 0]));
 	this.buttons.push( new Button(w-138, h-94, 32, 32, null, "D", "sendMove",[1, 0]));
+}
+
+Control.prototype.update = function() {
+	var sim = this.targetProgram.simulation;
+	var currentFocus;
+	if (sim.faction[sim.currentFaction].isPlayerControlled == true) {
+		currentFocus = sim.agent[sim.currentAgent];
+
+		if (currentFocus !== undefined && currentFocus.faction.isPlayerControlled) {
+			//console.log(currentFocus.faction);
+			this.view.update(currentFocus.x, currentFocus.y);
+		}
+	}
 }
 
 // commands

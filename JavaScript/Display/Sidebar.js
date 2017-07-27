@@ -212,6 +212,9 @@ Sidebar.prototype.showCursorInfo = function() { //TODO make method cache the tex
 }
 Sidebar.prototype.drawMinimap = function() {
 	var map = this.targetSim.faction[this.targetSim.playerFaction].visionMap;
+	if (this.targetSim.isDebugMode) {
+		map = this.targetSim.terrain;
+	}
 	var offsetY = 0;
 	var offsetX = 0;
 	var sqSize = 3;

@@ -66,7 +66,7 @@ Simulation.prototype.progressFactionTurn = function() {
 		this.updateFactionCities();
 		this.turnStart = false;
 	}
-	// AI factions don't wait for user input!
+
 	if (this.faction[this.currentFaction].isPlayerControlled == true) {
 		this.currentAgent = this.getNextFactionAgent(this.currentFaction);
 		if (this.currentAgent < this.agent.length) { // valid agent?
@@ -74,6 +74,7 @@ Simulation.prototype.progressFactionTurn = function() {
 		} else {
 			this.endFactionTurn();
 		}
+		// AI factions don't wait for user input!
 	} else {
 		while (this.currentFactionDone == false) {
 			this.currentAgent = this.getNextFactionAgent(this.currentFaction);
