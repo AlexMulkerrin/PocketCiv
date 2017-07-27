@@ -67,6 +67,7 @@ Display.prototype.resizeCanvas = function() {
 	//var widthScale = (this.canvas.width- this.sidebarWidth)/this.targetSim.terrain.width ;
 	//var heightScale = this.canvas.height/this.targetSim.terrain.height;
 	//maxScale = Math.floor(Math.min(widthScale, heightScale));
+	this.setScale();
 	this.sqSize = 16 * this.scale;
 	//	this.sqSize = 64;//maxScale;
 

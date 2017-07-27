@@ -68,8 +68,17 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				break;
 
 			case 79: // 'o' key
-				console.log("TODO command: switch tileset");
+				//console.log("TODO command: switch tileset");
 				t.switchTileset();
+				break;
+
+			case 173: // reduce zoom
+				//console.log("TODO command: reduce zoom");
+				t.changeZoom(-1);
+				break;
+			case 61: // increase zoom
+				//console.log("TODO command: increase zoom");
+				t.changeZoom(1);
 				break;
 
 			case 80: // 'p' key
@@ -88,7 +97,7 @@ Control.prototype.createKeyboardEventHandlers = function() {
 				break;
 
 			default:
-				console.log("TODO command: no effect");
+				console.log(keyCode+" TODO command: no effect");
 		}
 	}
 }
@@ -147,6 +156,13 @@ Control.prototype.toggleDebugMode = function() {
 }
 Control.prototype.switchTileset = function() {
 	this.targetProgram.display.switchTileset();
+}
+Control.prototype.changeZoom = function(change) {
+	this.view.zoom += change;
+	if (this.view.zoom<1) this.view.zoom = 1;
+	this.update();
+	this.targetProgram.display.resizeCanvas();
+	console.log(this.view.zoom);
 }
 Control.prototype.resetSim = function() {
 	this.targetProgram.createNewProgram();

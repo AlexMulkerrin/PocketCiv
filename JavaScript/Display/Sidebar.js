@@ -236,6 +236,9 @@ Sidebar.prototype.drawMinimap = function() {
 			}
 		}
 	}
+
+	var view = this.targetControl.view; //new method
+
 	var viewWidth = Math.floor((window.innerWidth-this.width)/mainSqSize);
 	if (viewWidth>this.targetSim.terrain.width) viewWidth = this.targetSim.terrain.width;
 	viewWidth *= sqSize;
@@ -244,10 +247,15 @@ Sidebar.prototype.drawMinimap = function() {
 	viewHeight *= sqSize;
 
 	this.ctx.fillStyle = interfaceColours.text;
-	this.ctx.fillRect(offsetX, offsetY, 1, viewHeight);
-	this.ctx.fillRect(offsetX, offsetY, viewWidth, 1);
-	this.ctx.fillRect(offsetX+viewWidth-1, offsetY, 1, viewHeight);
-	this.ctx.fillRect(offsetX, offsetY+viewHeight-1, viewWidth, 1);
+	var x = offsetX + view.cornerX*sqSize;
+	var y = offsetY + view.cornerY*sqSize;
+	var w = view.width * sqSize;
+	var h = view.height * sqSize;
+
+	this.ctx.fillRect(x, y, 1, h);
+	this.ctx.fillRect(x, y, w, 1);
+	this.ctx.fillRect(x+w-1, y, 1, h);
+	this.ctx.fillRect(x, y+h-1, w, 1);
 }
 Sidebar.prototype.showDebugInfo = function() {
 	// put offset with respect to browser window NOT terrain

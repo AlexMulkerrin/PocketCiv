@@ -1,4 +1,6 @@
 function View() {
+
+	this.targetCanvas = document.getElementById("pocketCivCanvas");
 	// plans for this module are that it has an offset in world coords
 	this.offsetX = 0;
 	this.offsetY = 0;
@@ -23,6 +25,12 @@ function View() {
 View.prototype.update = function(focusX, focusY) {
 	this.offsetX = focusX;
 	this.offsetY = focusY;
+
+	//calculate max for borderLeft and borderTop
+	var maxX =(this.targetCanvas.width - 240)/(this.zoom*16);
+	var maxY = (this.targetCanvas.height)/(this.zoom*16);
+	this.borderLeft = Math.floor(maxX/2);
+	this.borderTop = Math.floor(maxY/2);
 
 	this.cornerX = this.offsetX - this.borderLeft;
 	this.cornerY = this.offsetY - this.borderTop;
