@@ -2,8 +2,10 @@
 Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a project :)
 
 ## Update Log
-current status 14/4/2017:
-- finally a chance to do some more work on this! I've tweaked the sidebar and added the beginnings of a minimap. Excited to have some free time to spend on this again :D
+current status 27/07/2017:
+- first commits in a long time, been doing some improvements to the interface to get back into coding on this project. Lots of new parts to the interface including buttons, zoom levels and auto-focus. Game should work on any size of browser window now :)
+
+- 14/4/2017 Finally a chance to do some more work on this! I've tweaked the sidebar and added the beginnings of a minimap. Excited to have some free time to spend on this again :D
 
 - 12/3/2017 New code base structure is up! Code migration from prototype is 99% complete and the game has classic Civ Tilesets :D Latest version can be accessed in the link below update log
 
@@ -14,9 +16,9 @@ http://tangentialtopics.blogspot.com/2017/03/pocketciv-prototype.html
 https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80ebc68bb/Prototype.html
 - 13/2/2017: Protoyping minimal gameplay loop without art assets.
 
-## Link to in Development Version (0.0.9ish?)
+## Link to in Development Version (0.0.99... version 0.1 soon, promise!)
 This *might* be crawling with bugs or totally unusable, you have been warned!
-https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/e0e9a874/index.html
+https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/5327a70bb965a52c337a3d57b5a2d3bb72502bf7/index.html
 
 ## Controls
 * wasd/arrow keys to move selected unit
@@ -24,6 +26,7 @@ https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/e0e9a874/index.html
 * '**B**' to settle city *note* sidebar will track the quality rating of the terrain tile the selected unit is currently on. When the tile is suitable there is a green prompt :)
 
 * Escape key to abdicate, leaving an AI leader in charge of your empire
+* '**+,-**' keys to change zoom level/how big each pixel of sprites will appear.
 * '**R**' key to reset game with a new civilisation and world map
 * '**C**' key to ??? (debug/cheats)
 * '**P**' key to toggle pause (good for AI only games or when turn limit is reached)
@@ -57,13 +60,16 @@ Still working on this, not all files/directories present at the moment...
 * Display/
   - Display.js main module for output to screen
   - SpriteSheet.js generates unit sprites from faction colours
+  - Sidebar.js gives the player heaps of info along with minimap and buttons
   - renderer TODO
   - minimap TODO
   - interface  TODO
 
-* Controls/
+* Control/
   - Control.js handles player input to program
-  - mouse TODO
+  - Mouse.js handles user mouse controls
+  - Button.js class for all onscreen buttons
+  - View.js state of the main view screen
   - keyboard TODO
 
 * Audio/ **TODO**
