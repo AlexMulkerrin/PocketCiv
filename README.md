@@ -18,7 +18,7 @@ https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80
 
 ## Link to in Development Version (0.0.99... version 0.1 soon, promise!)
 This *might* be crawling with bugs or totally unusable, you have been warned!
-https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/5327a70bb965a52c337a3d57b5a2d3bb72502bf7/index.html
+https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/6150cd83637dbf30ad2e68f6d928774f1739cb02/index.html
 
 ## Controls
 * wasd/arrow keys to move selected unit
