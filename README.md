@@ -2,8 +2,11 @@
 Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a project :)
 
 ## Update Log
-current status 27/07/2017:
-- first commits in a long time, been doing some improvements to the interface to get back into coding on this project. Lots of new parts to the interface including buttons, zoom levels and auto-focus. Game should work on any size of browser window now :)
+current status 19/09/2022:
+
+- Blowing off the layers of digital dust that have accrued on this project.
+
+- 27/07/2017 first commits in a long time, been doing some improvements to the interface to get back into coding on this project. Lots of new parts to the interface including buttons, zoom levels and auto-focus. Game should work on any size of browser window now :)
 
 - 14/4/2017 Finally a chance to do some more work on this! I've tweaked the sidebar and added the beginnings of a minimap. Excited to have some free time to spend on this again :D
 
