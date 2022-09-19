@@ -4,7 +4,7 @@ Minimal Civilisation-like game. Made a pathfinder and wanting to use it in a pro
 ## Update Log
 current status 19/09/2022:
 
-- Blowing off the layers of digital dust that have accrued on this project.
+- Blowing off the layers of digital dust that have accrued on this project. Initial commit for uploading to itch.
 
 - 27/07/2017 first commits in a long time, been doing some improvements to the interface to get back into coding on this project. Lots of new parts to the interface including buttons, zoom levels and auto-focus. Game should work on any size of browser window now :)
 
@@ -12,9 +12,9 @@ current status 19/09/2022:
 
 - 12/3/2017 New code base structure is up! Code migration from prototype is 99% complete and the game has classic Civ Tilesets :D Latest version can be accessed in the link below update log
 
-- 6/3/2017 Been working on documentation and new code base structure, also blog posting about improved art :D 
+- 6/3/2017 Been working on documentation and new code base structure, also blog posting about improved art :D
 http://tangentialtopics.blogspot.com/2017/03/pocketciv-prototype.html
- 
+
 - 2/3/2017: Prototype is now playable! Have a gander here:
 https://cdn.rawgit.com/AlexMulkerrin/PocketCiv/2697b1a69e7ad1ef5a094e4b20c7c8e80ebc68bb/Prototype.html
 - 13/2/2017: Protoyping minimal gameplay loop without art assets.
@@ -49,7 +49,7 @@ Still working on this, not all files/directories present at the moment...
   - file handling TODO
   - image loader TODO
   - music loader TODO
- 
+
 * Simulation/
   - Simulation.js overarching simulation logic
   - Terrain.js handles terrain generation too
@@ -59,7 +59,7 @@ Still working on this, not all files/directories present at the moment...
   - VisionMap.js per faction knowledge of the world
   - Agent.js mobile unit in the world
   - Structure.js static unit in the world
- 
+
 * Display/
   - Display.js main module for output to screen
   - SpriteSheet.js generates unit sprites from faction colours
@@ -76,8 +76,8 @@ Still working on this, not all files/directories present at the moment...
   - keyboard TODO
 
 * Audio/ **TODO**
-  - sound engine 
-  - music player 
+  - sound engine
+  - music player
 
 ## Other directories
 * /Resources/
